@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>WebTorrent Share + Control</title>
+<script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+
+<style>
+body{
+  font-family:Arial, sans-serif;
+  padding:16px;
+  max-width:720px;
+  margin:auto;
+}
+h2{margin-bottom:4px}
+input,button{
+  width:100%;
+  padding:12px;
+  margin:6px 0;
+  font-size:16px;
+}
+.controls{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.status{
+  background:#eef;
+  padding:10px;
+  border-radius:6px;
+  margin-top:8px;
+  font-size:0.9em;
+}
+pre{
+  background:#111;
+  color:#0f0;
+  padding:10px;
+  height:220px;
+  overflow:auto;
+  font-size:12px;
+}
+.danger{background:#c00;color:#fff}
+.warn{background:#f90;color:#000}
+.ok{background:#0a7;color:#fff}
+</style>
+</head>
+<body>
+
+<h2>📦 Share File via Torrent (Controlled)</h2>
+
+<input type="file" id="fileInput">
+<button onclick="seedFile()" class="ok">🌱 Mulai Seed</button>
+
+<input id="magnet" placeholder="Magnet URI">
+
+<div class="controls">
+  <button onclick="pauseSeed()" class="warn">⏸️ Pause Seed</button>
+  <button onclick="resumeSeed()" class="ok">▶️ Resume Seed</button>
+</div>
+
+<button onclick="download()">⬇️ Download dari Magnet</button>
+<button onclick="resetTorrent()" class="danger">♻️ Reset Torrent</button>
+
+<div id="info" class="status">ℹ️ Belum ada aktivitas</div>
+<pre id="log"></pre>
+
+<script>
+const client = new WebTorrent();
+let currentTorrent = null;
+
+const log = msg => {
+  const p = document.getElementById("log");
+  p.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+  p.scrollTop = p.scrollHeight;
+};
+
+function updateStatus(){
+  if(!currentTorrent){
+    document.getElementById("info").textContent = "ℹ️ Tidak ada torrent aktif";
+    return;
+  }
+  document.getElementById("info").innerHTML = `
+📊 Status Torrent<br>
+🟢 Mode: ${currentTorrent.done ? "Seeder" : "Downloader"}<br>
+👥 Peer: ${currentTorrent.numPeers}<br>
+📦 File: ${currentTorrent.files.length}<br>
+⬆️ Upload total: ${(currentTorrent.uploaded/1024).toFixed(1)} KB<br>
+⚡ Upload speed: ${(currentTorrent.uploadSpeed/1024).toFixed(1)} KB/s
+`;
+}
+
+// =======================
+// SEED
+// =======================
+function seedFile(){
+  const f = document.getElementById("fileInput").files[0];
+  if(!f){ alert("Pilih file dulu"); return; }
+
+  client.seed(f, torrent=>{
+    currentTorrent = torrent;
+    document.getElementById("magnet").value = torrent.magnetURI;
+    log("🌱 Seeding dimulai");
+    setInterval(updateStatus,1000);
+  });
+}
+
+// =======================
+// DOWNLOAD
+// =======================
+function download(){
+  const magnet = document.getElementById("magnet").value.trim();
+  if(!magnet){ alert("Paste magnet dulu"); return; }
+
+  client.add(magnet, torrent=>{
+    currentTorrent = torrent;
+    log("⬇️ Download dimulai");
+    setInterval(updateStatus,1000);
+
+    torrent.on("done", ()=>{
+      log("✅ Download selesai → otomatis jadi seeder");
+    });
+  });
+}
+
+// =======================
+// PAUSE / RESUME
+// =======================
+function pauseSeed(){
+  if(currentTorrent){
+    currentTorrent.pause();
+    log("⏸️ Torrent di-pause");
+  }
+}
+
+function resumeSeed(){
+  if(currentTorrent){
+    currentTorrent.resume();
+    log("▶️ Torrent dilanjutkan");
+  }
+}
+
+// =======================
+// RESET TOTAL
+// =======================
+function resetTorrent(){
+  if(currentTorrent){
+    currentTorrent.destroy(()=>{
+      log("♻️ Torrent dihancurkan");
+    });
+    currentTorrent = null;
+  }
+  client.torrents.forEach(t=>client.remove(t.infoHash));
+  document.getElementById("magnet").value = "";
+  document.getElementById("info").textContent = "♻️ Torrent di-reset total";
+  log("🗑️ Semua data torrent dibersihkan");
+}
+</script>
+
+</body>
+</html>
