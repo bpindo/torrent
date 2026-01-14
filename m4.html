@@ -2,157 +2,257 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>WebTorrent Share + Control</title>
+<title>WebTorrent Seeder Professional</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
 
 <style>
-body{
-  font-family:Arial, sans-serif;
-  padding:16px;
-  max-width:720px;
-  margin:auto;
+:root{
+  --idle:#ffca28;
+  --peer:#29b6f6;
+  --upload:#66bb6a;
+  --bg:#0d1117;
+  --panel:#161b22;
+  --text:#e6edf3;
 }
-h2{margin-bottom:4px}
+body{
+  font-family:system-ui,Segoe UI,Arial,sans-serif;
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+}
+.wrapper{
+  max-width:900px;
+  margin:auto;
+  padding:16px;
+}
+h1{
+  font-size:1.4em;
+  margin-bottom:10px;
+}
+.panel{
+  background:var(--panel);
+  border-radius:14px;
+  padding:14px;
+  margin-bottom:14px;
+}
+.row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+.col{
+  flex:1;
+  min-width:180px;
+}
+
 input,button{
   width:100%;
-  padding:12px;
-  margin:6px 0;
-  font-size:16px;
+  padding:14px;
+  border-radius:12px;
+  border:none;
+  font-size:1em;
 }
-.controls{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:8px;
+input{background:#0d1117;color:#fff;border:1px solid #30363d}
+button{cursor:pointer;font-weight:600}
+.seed{background:#2ea043;color:#fff}
+.copy{background:#1f6feb;color:#fff}
+.down{background:#d29922;color:#000}
+button:disabled{opacity:.5}
+
+/* STATUS BAR */
+.statusBar{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-size:.95em;
 }
-.status{
-  background:#eef;
-  padding:10px;
-  border-radius:6px;
-  margin-top:8px;
-  font-size:0.9em;
+.led{
+  width:12px;
+  height:12px;
+  border-radius:50%;
+  background:var(--idle);
+  box-shadow:0 0 10px var(--idle);
 }
+.led.peer{background:var(--peer);box-shadow:0 0 10px var(--peer)}
+.led.upload{background:var(--upload);box-shadow:0 0 12px var(--upload)}
+
+.stats div{
+  margin:4px 0;
+  font-size:.9em;
+}
+
 pre{
-  background:#111;
-  color:#0f0;
-  padding:10px;
-  height:220px;
+  background:#010409;
+  border:1px solid #30363d;
+  padding:12px;
+  border-radius:12px;
+  height:230px;
   overflow:auto;
   font-size:12px;
+  color:#8b949e;
 }
-.danger{background:#c00;color:#fff}
-.warn{background:#f90;color:#000}
-.ok{background:#0a7;color:#fff}
+.footer{
+  text-align:center;
+  font-size:.75em;
+  opacity:.6;
+}
+
+/* heartbeat */
+@keyframes pulse{
+  0%{opacity:.4}
+  50%{opacity:1}
+  100%{opacity:.4}
+}
+.heartbeat{
+  animation:pulse 1.6s infinite;
+}
 </style>
 </head>
 <body>
 
-<h2>📦 Share File via Torrent (Controlled)</h2>
+<div class="wrapper">
+<h1>🌱 WebTorrent Seeder · Professional Mode</h1>
 
-<input type="file" id="fileInput">
-<button onclick="seedFile()" class="ok">🌱 Mulai Seed</button>
-
-<input id="magnet" placeholder="Magnet URI">
-
-<div class="controls">
-  <button onclick="pauseSeed()" class="warn">⏸️ Pause Seed</button>
-  <button onclick="resumeSeed()" class="ok">▶️ Resume Seed</button>
+<div class="panel statusBar">
+  <div id="led" class="led"></div>
+  <div id="mainStatus" class="heartbeat">
+    Idle · Belum ada aktivitas
+  </div>
 </div>
 
-<button onclick="download()">⬇️ Download dari Magnet</button>
-<button onclick="resetTorrent()" class="danger">♻️ Reset Torrent</button>
+<div class="panel">
+  <input type="file" id="fileInput">
+  <div class="row">
+    <button class="seed col" onclick="seedFile()">Mulai Seeding</button>
+    <button class="down col" onclick="download()">Download Magnet</button>
+  </div>
+  <input id="magnet" placeholder="Magnet URI">
+  <button class="copy" id="copyBtn" onclick="copyMagnet()" disabled>
+    Salin Magnet
+  </button>
+</div>
 
-<div id="info" class="status">ℹ️ Belum ada aktivitas</div>
-<pre id="log"></pre>
+<div class="panel stats">
+  <strong>📊 Seeder Dashboard</strong>
+  <div>Mode: <span id="mode">Idle</span></div>
+  <div>Peer: <span id="peers">0</span></div>
+  <div>Upload total: <span id="uploaded">0 B</span></div>
+  <div>Speed: <span id="speed">0 B/s</span></div>
+  <div>Waktu seeding: <span id="uptime">0s</span></div>
+</div>
+
+<div class="panel">
+  <strong>🖥 Seeder Console</strong>
+  <pre id="log">[SYSTEM] Seeder siap
+Menunggu perintah...
+  </pre>
+</div>
+
+<div class="footer">
+  Selama tab terbuka, browser ini berfungsi sebagai seeder 🌱
+</div>
+</div>
 
 <script>
 const client = new WebTorrent();
-let currentTorrent = null;
+let torrent=null;
+let uploaded=0;
+let startTime=0;
+let idleTicker=null;
 
-const log = msg => {
-  const p = document.getElementById("log");
-  p.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
-  p.scrollTop = p.scrollHeight;
+const el = id=>document.getElementById(id);
+const log = m=>{
+  el("log").textContent+=`[${new Date().toLocaleTimeString()}] ${m}\n`;
+  el("log").scrollTop=el("log").scrollHeight;
 };
 
-function updateStatus(){
-  if(!currentTorrent){
-    document.getElementById("info").textContent = "ℹ️ Tidak ada torrent aktif";
-    return;
-  }
-  document.getElementById("info").innerHTML = `
-📊 Status Torrent<br>
-🟢 Mode: ${currentTorrent.done ? "Seeder" : "Downloader"}<br>
-👥 Peer: ${currentTorrent.numPeers}<br>
-📦 File: ${currentTorrent.files.length}<br>
-⬆️ Upload total: ${(currentTorrent.uploaded/1024).toFixed(1)} KB<br>
-⚡ Upload speed: ${(currentTorrent.uploadSpeed/1024).toFixed(1)} KB/s
-`;
+const fmt=b=>{
+  if(b>1024*1024) return (b/1024/1024).toFixed(2)+" MB";
+  if(b>1024) return (b/1024).toFixed(1)+" KB";
+  return b+" B";
+};
+
+function setStatus(text,mode="idle"){
+  el("mainStatus").textContent=text;
+  el("mode").textContent=mode.toUpperCase();
+  el("led").className="led "+(mode==="peer"?"peer":mode==="upload"?"upload":"");
 }
 
-// =======================
-// SEED
-// =======================
+function startUptime(){
+  startTime=Date.now();
+  setInterval(()=>{
+    if(startTime){
+      el("uptime").textContent=
+        Math.floor((Date.now()-startTime)/1000)+"s";
+    }
+  },1000);
+}
+
+function startIdle(){
+  idleTicker=setInterval(()=>{
+    if(torrent && torrent.numPeers===0){
+      log("⏳ Seeder aktif · Menunggu peer");
+    }
+  },15000);
+}
+
 function seedFile(){
-  const f = document.getElementById("fileInput").files[0];
-  if(!f){ alert("Pilih file dulu"); return; }
+  const f=el("fileInput").files[0];
+  if(!f) return alert("Pilih file dulu");
 
-  client.seed(f, torrent=>{
-    currentTorrent = torrent;
-    document.getElementById("magnet").value = torrent.magnetURI;
-    log("🌱 Seeding dimulai");
-    setInterval(updateStatus,1000);
+  client.seed(f,t=>{
+    torrent=t;
+    startUptime();
+    setStatus("🌱 Seeder aktif · Menunggu peer","idle");
+    log("Seeding dimulai: "+f.name);
+
+    el("magnet").value=t.magnetURI;
+    el("copyBtn").disabled=false;
+
+    startIdle();
+    bindStats();
   });
 }
 
-// =======================
-// DOWNLOAD
-// =======================
 function download(){
-  const magnet = document.getElementById("magnet").value.trim();
-  if(!magnet){ alert("Paste magnet dulu"); return; }
+  const m=el("magnet").value.trim();
+  if(!m) return alert("Paste magnet dulu");
 
-  client.add(magnet, torrent=>{
-    currentTorrent = torrent;
-    log("⬇️ Download dimulai");
-    setInterval(updateStatus,1000);
+  client.add(m,t=>{
+    torrent=t;
+    startUptime();
+    setStatus("⬇️ Download berlangsung","peer");
+    log("Download dimulai");
 
-    torrent.on("done", ()=>{
-      log("✅ Download selesai → otomatis jadi seeder");
+    t.on("done",()=>{
+      setStatus("🌱 Download selesai · Ikut seeding","idle");
+      log("Download selesai · Beralih ke seeder");
+      startIdle();
     });
+
+    bindStats();
   });
 }
 
-// =======================
-// PAUSE / RESUME
-// =======================
-function pauseSeed(){
-  if(currentTorrent){
-    currentTorrent.pause();
-    log("⏸️ Torrent di-pause");
-  }
+function bindStats(){
+  torrent.on("wire",()=>{
+    el("peers").textContent=torrent.numPeers;
+    setStatus("🔗 Peer terhubung","peer");
+    log("Peer terhubung");
+  });
+
+  torrent.on("upload",b=>{
+    uploaded+=b;
+    el("uploaded").textContent=fmt(uploaded);
+    el("speed").textContent=fmt(torrent.uploadSpeed)+"/s";
+    setStatus("⬆️ Upload aktif","upload");
+  });
 }
 
-function resumeSeed(){
-  if(currentTorrent){
-    currentTorrent.resume();
-    log("▶️ Torrent dilanjutkan");
-  }
-}
-
-// =======================
-// RESET TOTAL
-// =======================
-function resetTorrent(){
-  if(currentTorrent){
-    currentTorrent.destroy(()=>{
-      log("♻️ Torrent dihancurkan");
-    });
-    currentTorrent = null;
-  }
-  client.torrents.forEach(t=>client.remove(t.infoHash));
-  document.getElementById("magnet").value = "";
-  document.getElementById("info").textContent = "♻️ Torrent di-reset total";
-  log("🗑️ Semua data torrent dibersihkan");
+function copyMagnet(){
+  navigator.clipboard.writeText(el("magnet").value);
+  log("Magnet disalin");
 }
 </script>
 
