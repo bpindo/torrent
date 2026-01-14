@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Share File via Torrent</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+
+<style>
+body{
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  padding:14px;
+  max-width:720px;
+  margin:auto;
+  background:#fafafa;
+}
+h2{
+  font-size:1.4em;
+}
+input,button{
+  width:100%;
+  padding:14px;
+  margin:8px 0;
+  font-size:1em;
+  border-radius:10px;
+}
+input{
+  border:1px solid #ccc;
+}
+button{
+  border:none;
+  cursor:pointer;
+  font-weight:600;
+}
+.btn-seed{background:#4CAF50;color:#fff}
+.btn-copy{background:#2196F3;color:#fff}
+.btn-download{background:#FF9800;color:#fff}
+button:disabled{
+  background:#aaa;
+}
+.status{
+  background:#e3f2fd;
+  padding:12px;
+  border-radius:10px;
+  margin-top:10px;
+  font-size:0.95em;
+}
+pre{
+  background:#111;
+  color:#0f0;
+  padding:10px;
+  border-radius:10px;
+  height:200px;
+  overflow:auto;
+  font-size:12px;
+}
+.footer{
+  text-align:center;
+  font-size:0.8em;
+  color:#666;
+  margin-top:10px;
+}
+</style>
+</head>
+<body>
+
+<h2>📤 Bagikan File via Torrent</h2>
+
+<div class="status">
+Upload file → Magnet → Share → Download (P2P)
+</div>
+
+<input type="file" id="fileInput">
+
+<button class="btn-seed" onclick="seedFile()">
+🌱 Bagikan File
+</button>
+
+<input id="magnet" placeholder="Magnet URI muncul di sini">
+
+<button class="btn-copy" id="copyBtn" onclick="copyMagnet()" disabled>
+📋 Salin Magnet
+</button>
+
+<button class="btn-download" onclick="download()">
+⬇️ Download dari Magnet
+</button>
+
+<div id="info" class="status">ℹ️ Belum ada aktivitas</div>
+
+<pre id="log"></pre>
+
+<div class="footer">
+P2P Torrent via Browser · Mobile Friendly
+</div>
+
+<script>
+const client = new WebTorrent();
+let currentTorrent = null;
+
+const log = msg => {
+  const p = document.getElementById("log");
+  p.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+  p.scrollTop = p.scrollHeight;
+};
+
+// =======================
+// COPY MAGNET
+// =======================
+function copyMagnet(){
+  const magnet = document.getElementById("magnet").value;
+  if(!magnet) return;
+
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(magnet).then(()=>{
+      log("📋 Magnet disalin");
+      document.getElementById("info").textContent =
+        "📋 Magnet berhasil disalin";
+    });
+  }else{
+    const t=document.createElement("textarea");
+    t.value=magnet;
+    document.body.appendChild(t);
+    t.select();
+    document.execCommand("copy");
+    document.body.removeChild(t);
+    log("📋 Magnet disalin (fallback)");
+  }
+}
+
+// =======================
+// SEED FILE
+// =======================
+function seedFile(){
+  const input = document.getElementById("fileInput");
+  if(!input.files.length){
+    alert("Pilih file dulu");
+    return;
+  }
+
+  const file = input.files[0];
+  log("📁 File: " + file.name);
+
+  document.getElementById("info").textContent =
+    "🌱 Membuat torrent...";
+
+  client.seed(file, torrent=>{
+    currentTorrent = torrent;
+    document.getElementById("magnet").value = torrent.magnetURI;
+    document.getElementById("copyBtn").disabled = false;
+
+    log("🧲 Magnet siap");
+    document.getElementById("info").textContent =
+      "🌱 Seeding aktif | Magnet siap";
+  });
+}
+
+// =======================
+// DOWNLOAD + AUTO SAVE
+// =======================
+function download(){
+  const magnet = document.getElementById("magnet").value.trim();
+  if(!magnet){
+    alert("Paste magnet dulu");
+    return;
+  }
+
+  client.add(magnet, torrent=>{
+    currentTorrent = torrent;
+    log("⬇️ Download dimulai");
+
+    torrent.on("download", ()=>{
+      const p = Math.round(torrent.progress * 100);
+      document.getElementById("info").textContent =
+        `⬇️ Download ${p}%`;
+    });
+
+    torrent.on("done", ()=>{
+      log("✅ Download selesai");
+      document.getElementById("info").textContent =
+        "💾 Menyimpan file...";
+
+      torrent.files.forEach(file=>{
+        file.getBlob((err,blob)=>{
+          const url=URL.createObjectURL(blob);
+          const a=document.createElement("a");
+          a.href=url;
+          a.download=file.name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          log("💾 File tersimpan: "+file.name);
+        });
+      });
+
+      document.getElementById("info").textContent =
+        "✅ File tersimpan di Downloads";
+    });
+  });
+}
+</script>
+
+</body>
+</html>
