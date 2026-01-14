@@ -2,73 +2,112 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Share File JSON via Torrent</title>
+<title>WebTorrent P2P Share</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
 
 <style>
 body{
-  font-family:Arial, sans-serif;
-  padding:20px;
-  max-width:700px;
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  padding:14px;
+  max-width:720px;
   margin:auto;
+  background:#fafafa;
 }
-h2{margin-bottom:5px}
+h2{font-size:1.4em}
 input,button{
   width:100%;
-  padding:10px;
-  margin:6px 0;
+  padding:14px;
+  margin:8px 0;
+  font-size:1em;
+  border-radius:10px;
 }
-.status{
-  background:#eef;
-  padding:10px;
-  border-radius:6px;
-  margin-top:8px;
-  font-size:0.9em;
-}
-.btn-copy{
-  background:#4CAF50;
-  color:white;
+input{border:1px solid #ccc}
+button{
   border:none;
   cursor:pointer;
+  font-weight:600;
 }
-.btn-copy:disabled{
-  background:#aaa;
+.btn-seed{background:#4CAF50;color:#fff}
+.btn-copy{background:#2196F3;color:#fff}
+.btn-download{background:#FF9800;color:#fff}
+button:disabled{background:#aaa}
+
+.status{
+  background:#e3f2fd;
+  padding:12px;
+  border-radius:10px;
+  margin-top:10px;
+  font-size:0.95em;
 }
+.stats{
+  background:#f1f8e9;
+  padding:12px;
+  border-radius:10px;
+  margin-top:10px;
+  font-size:0.9em;
+}
+.stats div{margin:4px 0}
+
 pre{
   background:#111;
   color:#0f0;
   padding:10px;
-  height:220px;
+  border-radius:10px;
+  height:200px;
   overflow:auto;
   font-size:12px;
+}
+.footer{
+  text-align:center;
+  font-size:0.8em;
+  color:#666;
+  margin-top:10px;
 }
 </style>
 </head>
 <body>
 
-<h2>📤 Bagikan File (contoh: aku.json)</h2>
-<p class="status">
-Upload file → otomatis jadi torrent → dapat magnet → dibagikan
-</p>
+<h2>📤 WebTorrent P2P Share</h2>
+
+<div class="status">
+Upload → Seed → Share Magnet → Download → <strong>Ikut Seeding</strong>
+</div>
 
 <input type="file" id="fileInput">
-<button onclick="seedFile()">🌱 Bagikan File</button>
 
-<input id="magnet" placeholder="Magnet URI akan muncul di sini">
+<button class="btn-seed" onclick="seedFile()">🌱 Mulai Seeding</button>
+
+<input id="magnet" placeholder="Magnet URI muncul di sini">
 
 <button class="btn-copy" id="copyBtn" onclick="copyMagnet()" disabled>
 📋 Salin Magnet
 </button>
 
-<button onclick="download()">⬇️ Download dari Magnet</button>
+<button class="btn-download" onclick="download()">⬇️ Download dari Magnet</button>
 
 <div id="info" class="status">ℹ️ Belum ada aktivitas</div>
 
+<div class="stats">
+  <strong>📊 Status Torrent</strong>
+  <div>🟢 Mode: <span id="seedStatus">Tidak aktif</span></div>
+  <div>👥 Peer: <span id="peerCount">0</span></div>
+  <div>📦 File: <span id="fileCount">0</span></div>
+  <div>⬆️ Upload total: <span id="uploaded">0 B</span></div>
+  <div>⚡ Upload speed: <span id="upSpeed">0 B/s</span></div>
+</div>
+
 <pre id="log"></pre>
+
+<div class="footer">
+Browser Torrent · Selama tab terbuka, kamu adalah seeder 🌱
+</div>
 
 <script>
 const client = new WebTorrent();
 let currentTorrent = null;
+let uploadedBytes = 0;
 
 const log = msg => {
   const p = document.getElementById("log");
@@ -76,86 +115,56 @@ const log = msg => {
   p.scrollTop = p.scrollHeight;
 };
 
+function format(bytes){
+  if(bytes > 1024*1024) return (bytes/1024/1024).toFixed(2)+" MB";
+  if(bytes > 1024) return (bytes/1024).toFixed(1)+" KB";
+  return bytes+" B";
+}
+
 // =======================
 // COPY MAGNET
 // =======================
 function copyMagnet(){
   const magnet = document.getElementById("magnet").value;
-
-  if(!magnet){
-    alert("Magnet belum tersedia");
-    return;
-  }
-
-  if(navigator.clipboard){
-    navigator.clipboard.writeText(magnet).then(() => {
-      log("📋 Magnet disalin ke clipboard");
-      document.getElementById("info").textContent =
-        "📋 Magnet berhasil disalin";
-    }).catch(() => fallbackCopy(magnet));
-  } else {
-    fallbackCopy(magnet);
-  }
-}
-
-function fallbackCopy(text){
-  const temp = document.createElement("textarea");
-  temp.value = text;
-  document.body.appendChild(temp);
-  temp.select();
-  document.execCommand("copy");
-  document.body.removeChild(temp);
-
-  log("📋 Magnet disalin (fallback)");
-  document.getElementById("info").textContent =
-    "📋 Magnet berhasil disalin";
+  if(!magnet) return;
+  navigator.clipboard.writeText(magnet);
+  log("📋 Magnet disalin");
+  document.getElementById("info").textContent = "📋 Magnet disalin";
 }
 
 // =======================
-// SEED FILE UPLOAD
+// SEED FILE (UPLOADER)
 // =======================
 function seedFile(){
   const input = document.getElementById("fileInput");
-
   if(!input.files.length){
-    alert("Pilih file dulu (contoh: aku.json)");
+    alert("Pilih file dulu");
     return;
   }
 
   const file = input.files[0];
+  uploadedBytes = 0;
 
-  document.getElementById("info").textContent =
-    "🌱 Membuat torrent dari file...";
+  document.getElementById("info").textContent = "🌱 Membuat torrent...";
+  log("📁 File: "+file.name);
 
-  log("📁 File dipilih: " + file.name);
-  log("📏 Ukuran: " + file.size + " byte");
-
-  client.seed(file, torrent => {
+  client.seed(file, torrent=>{
     currentTorrent = torrent;
-
     document.getElementById("magnet").value = torrent.magnetURI;
     document.getElementById("copyBtn").disabled = false;
 
-    document.getElementById("info").textContent =
-      "🌱 Seeding aktif | Magnet siap dibagikan";
+    document.getElementById("seedStatus").textContent = "AKTIF (Seeder)";
+    document.getElementById("fileCount").textContent = torrent.files.length;
 
-    log("🧲 Magnet dibuat");
+    log("🧲 Magnet siap");
     log("🌱 Seeding dimulai");
 
-    torrent.on("wire", () => {
-      log("🔗 Peer terhubung");
-      document.getElementById("info").textContent =
-        "🔗 Peer terhubung | Seeding berjalan";
-    });
-
-    torrent.on("upload", bytes => {
-      log("⬆️ Upload " + bytes + " byte");
-    });
+    bindSeederStats(torrent);
   });
 }
 
 // =======================
-// DOWNLOAD + AUTO SAVE
+// DOWNLOAD → AUTO SEED
 // =======================
 function download(){
   const magnet = document.getElementById("magnet").value.trim();
@@ -164,33 +173,34 @@ function download(){
     return;
   }
 
-  client.add(magnet, torrent => {
+  client.add(magnet, torrent=>{
     currentTorrent = torrent;
+    uploadedBytes = 0;
 
-    document.getElementById("info").textContent =
-      "⬇️ Download dimulai...";
-
+    document.getElementById("info").textContent = "⬇️ Download dimulai";
     log("⬇️ Download dimulai");
 
-    torrent.on("download", () => {
-      const percent = Math.round(torrent.progress * 100);
+    torrent.on("download", ()=>{
+      const p = Math.round(torrent.progress*100);
       document.getElementById("info").textContent =
-        `⬇️ Download ${percent}% | ${(torrent.downloadSpeed/1024).toFixed(1)} KB/s`;
+        `⬇️ Download ${p}%`;
     });
 
-    torrent.on("done", () => {
+    torrent.on("done", ()=>{
       log("✅ Download selesai");
+      log("🌱 Beralih ke mode SEEDER");
 
       document.getElementById("info").textContent =
-        "💾 Menyimpan file ke komputer...";
+        "🌱 Download selesai · Ikut seeding";
 
-      torrent.files.forEach(file => {
-        file.getBlob((err, blob) => {
-          if(err){
-            log("❌ Gagal ambil file");
-            return;
-          }
+      document.getElementById("seedStatus").textContent =
+        "AKTIF (Seeder)";
+      document.getElementById("fileCount").textContent =
+        torrent.files.length;
 
+      // AUTO SAVE FILE
+      torrent.files.forEach(file=>{
+        file.getBlob((err,blob)=>{
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.href = url;
@@ -198,14 +208,31 @@ function download(){
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
-
-          log("💾 File tersimpan: " + file.name);
+          log("💾 File tersimpan: "+file.name);
         });
       });
 
-      document.getElementById("info").textContent =
-        "✅ Download selesai & file tersimpan";
+      bindSeederStats(torrent);
     });
+  });
+}
+
+// =======================
+// COMMON SEEDER STATS
+// =======================
+function bindSeederStats(torrent){
+  torrent.on("wire", ()=>{
+    document.getElementById("peerCount").textContent =
+      torrent.numPeers;
+    log("🔗 Peer terhubung ("+torrent.numPeers+")");
+  });
+
+  torrent.on("upload", bytes=>{
+    uploadedBytes += bytes;
+    document.getElementById("uploaded").textContent =
+      format(uploadedBytes);
+    document.getElementById("upSpeed").textContent =
+      format(torrent.uploadSpeed)+"/s";
   });
 }
 </script>
