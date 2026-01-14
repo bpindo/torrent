@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Torrent Local ↔ Local</title>
+<script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+<style>
+body{font-family:sans-serif;padding:20px}
+button,input{padding:10px;margin:5px;width:100%}
+pre{background:#f5f5f5;padding:10px;height:260px;overflow:auto}
+.status{padding:8px;margin:5px 0;background:#eef;border-radius:6px}
+.small{font-size:0.9em;color:#555}
+</style>
+</head>
+<body>
+
+<h2>🔁 Torrent localStorage → localStorage</h2>
+
+<button onclick="saveLocal()">💾 Simpan ke localStorage</button>
+<div id="localInfo" class="status small">📦 Belum ada data lokal</div>
+
+<button onclick="seed()">🌱 Seed dari local</button>
+
+<input id="magnet" placeholder="Paste magnet di sini">
+
+<button onclick="download()">⬇️ Download ke local</button>
+
+<div id="torrentInfo" class="status small">🧲 Torrent belum aktif</div>
+
+<pre id="log"></pre>
+
+<script>
+const log = m => {
+  const p = document.getElementById('log');
+  p.textContent += `[${new Date().toLocaleTimeString()}] ${m}\n`;
+  p.scrollTop = p.scrollHeight;
+};
+
+const client = new WebTorrent();
+let currentTorrent = null;
+
+// =======================
+// SIMPAN KE LOCAL
+// =======================
+function saveLocal(){
+  const data = {
+    waktu: new Date().toISOString(),
+    pesan: "Ini data lokal browser",
+    angka: Math.random()
+  };
+
+  const json = JSON.stringify(data);
+  localStorage.setItem("DATA_JSON", json);
+
+  const bytes = new Blob([json]).size;
+
+  document.getElementById("localInfo").textContent =
+    `💾 Data tersimpan | Ukuran: ${bytes} byte (${(bytes/1024).toFixed(2)} KB)`;
+
+  log("💾 Data disimpan ke localStorage");
+  log("📏 Ukuran data: " + bytes + " byte");
+}
+
+// =======================
+// SEED
+// =======================
+function seed(){
+  const json = localStorage.getItem("DATA_JSON");
+  if(!json){
+    alert("localStorage kosong");
+    return;
+  }
+
+  const blob = new Blob([json], {type:"application/json"});
+
+  client.seed(blob,{name:"data.json"}, torrent=>{
+    currentTorrent = torrent;
+
+    document.getElementById("magnet").value = torrent.magnetURI;
+    document.getElementById("torrentInfo").textContent =
+      "🌱 Seeding aktif | Menunggu peer...";
+
+    log("🌱 Seeding dari localStorage");
+    log("🧲 Magnet dibuat");
+
+    torrent.on('wire',()=>{
+      log("🔗 Peer terhubung");
+      document.getElementById("torrentInfo").textContent =
+        "🔗 Peer terhubung | Seeding berjalan";
+    });
+
+    torrent.on('upload', bytes=>{
+      log(`⬆️ Upload ${bytes} byte`);
+    });
+  });
+}
+
+// =======================
+// DOWNLOAD
+// =======================
+function download(){
+  const magnet = document.getElementById('magnet').value.trim();
+  if(!magnet){
+    alert("Paste magnet dulu");
+    return;
+  }
+
+  client.add(magnet, torrent=>{
+    currentTorrent = torrent;
+
+    document.getElementById("torrentInfo").textContent =
+      "⬇️ Download dimulai | Mencari peer...";
+
+    log("⬇️ Download dimulai");
+
+    torrent.on('wire',()=>{
+      log("🔗 Peer ditemukan");
+      document.getElementById("torrentInfo").textContent =
+        "🔗 Peer ditemukan | Download berjalan";
+    });
+
+    torrent.on('download',()=>{
+      const percent = Math.round(torrent.progress * 100);
+      document.getElementById("torrentInfo").textContent =
+        `📦 Download ${percent}% | Kecepatan: ${(torrent.downloadSpeed/1024).toFixed(1)} KB/s`;
+    });
+
+    torrent.on('done',()=>{
+      torrent.files[0].getText((_,text)=>{
+        localStorage.setItem("DATA_JSON", text);
+
+        const bytes = new Blob([text]).size;
+
+        log("✅ Download selesai");
+        log("💾 Data masuk localStorage");
+        log("📏 Ukuran data: " + bytes + " byte");
+
+        document.getElementById("localInfo").textContent =
+          `💾 Data diterima | Ukuran: ${bytes} byte (${(bytes/1024).toFixed(2)} KB)`;
+
+        document.getElementById("torrentInfo").textContent =
+          "✅ Download selesai & tersimpan";
+      });
+    });
+
+    torrent.on('noPeers',()=>{
+      log("❌ Belum ada peer");
+      document.getElementById("torrentInfo").textContent =
+        "❌ Belum menemukan peer";
+    });
+  });
+}
+</script>
+
+</body>
+</html>
