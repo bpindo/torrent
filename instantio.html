@@ -99,15 +99,27 @@ Upload → Seed → Edit Pesan Telegram → Download → <strong>Ikut Seeding</s
 
 <input type="file" id="fileInput" onchange="autoSeed()">
 
-<input id="magnet" placeholder="Magnet URI muncul di sini">
+<input
+  id="magnet"
+  placeholder="Tempel magnet / hash (BTIH)"
+  spellcheck="false"
+  autocomplete="off"
+>
+
+<div class="status" id="hashInfo" style="display:none">
+  🔑 Torrent ID:
+  <code id="hashOnly"></code>
+</div>
+
 
 <button class="btn-edit" id="shareBtn" onclick="shareMagnet()" disabled>
-Share Magnet
+Share Torrent ID
 </button>
 
 <button class="btn-copy" id="copyBtn" onclick="copyMagnet()" disabled>
-📋 Salin Magnet
+  📋 Salin ID Torrent
 </button>
+
 
 <button class="btn-download" onclick="download()">⬇️ Download dari Magnet</button>
 
@@ -290,6 +302,13 @@ const CHANNEL_USERNAME = "promoteauto"; // TANPA @
 /* ======================
    WEBTORRENT
 ====================== */
+const TORRENT_TRACKERS = [
+  "wss://tracker.openwebtorrent.com",
+  "wss://tracker.btorrent.xyz",
+  "udp://tracker.opentrackr.org:1337",
+  "udp://explodie.org:6969"
+];
+
 const client = new WebTorrent();
 let currentTorrent = null;
 let uploadedBytes = 0;
@@ -306,25 +325,50 @@ function format(bytes){
   return bytes+" B";
 }
 
+function extractHash(input){
+  if(!input) return null;
+
+  const m = input.match(/btih:([a-f0-9]{40})/i);
+  if(m) return m[1];
+
+  if(/^[a-f0-9]{40}$/i.test(input))
+    return input;
+
+  return null;
+}
+
+
+function buildMagnet(hash, name){
+  let m = `magnet:?xt=urn:btih:${hash}`;
+
+  if(name){
+    m += `&dn=${encodeURIComponent(name)}`;
+  }
+
+  TORRENT_TRACKERS.forEach(tr => {
+    m += `&tr=${encodeURIComponent(tr)}`;
+  });
+
+  return m;
+}
+
+
 /* ======================
    COPY MAGNET
 ====================== */
 function copyMagnet(){
-  const input = document.getElementById("magnet");
-  if(!input.value) return;
+  const input = document.getElementById("magnet").value.trim();
+  const hash = extractHash(input);
+  if(!hash) return;
 
-  input.select();
-  input.setSelectionRange(0, 99999);
+  const text = `magnet:?xt=urn:btih:${hash}`;
 
-  try{
-    document.execCommand("copy");
-    log("📋 Magnet disalin (fallback)");
-    document.getElementById("info").textContent =
-      "📋 Magnet disalin";
-  }catch(e){
-    alert("Gagal menyalin magnet");
-  }
+  navigator.clipboard.writeText(text);
+  log("📋 Torrent ID disalin");
+  document.getElementById("info").textContent =
+    "📋 Torrent ID disalin";
 }
+
 
 
 /* ======================
@@ -377,7 +421,14 @@ function autoSeed(){
   client.seed(file, torrent=>{
     currentTorrent = torrent;
 
-    document.getElementById("magnet").value = torrent.magnetURI;
+    const hash = torrent.infoHash;
+
+	document.getElementById("magnet").value =
+  `magnet:?xt=urn:btih:${hash}`;
+
+	document.getElementById("hashOnly").textContent = hash;
+	document.getElementById("hashInfo").style.display = "block";
+
     document.getElementById("copyBtn").disabled = false;
     document.getElementById("shareBtn").disabled = false;
 
@@ -433,11 +484,15 @@ function autoSeed(){
    DOWNLOAD → AUTO SEED
 ====================== */
 function download(){
-  const magnet = document.getElementById("magnet").value.trim();
-  if(!magnet){
-    alert("Paste magnet dulu");
+  const input = document.getElementById("magnet").value.trim();
+  const hash = extractHash(input);
+
+  if(!hash){
+    alert("Masukkan magnet atau hash yang valid");
     return;
   }
+
+  const magnet = buildMagnet(hash);
 
   client.add(magnet, torrent=>{
     currentTorrent = torrent;
@@ -556,15 +611,11 @@ async function shareMagnet(){
   const magnet = document.getElementById("magnet").value.trim();
   if(!magnet) return;
 
-  const text = `
-📦 Torrent Update
+  const hash = extractHash(magnet);
 
-🧲 Magnet:
-${magnet}
-
-🌱 Seeder aktif
-⏱ ${new Date().toLocaleString()}
+  const text = `${hash}
 `;
+
 
   document.getElementById("info").textContent =
     "✏️ Mengedit pesan Telegram...";
