@@ -66,6 +66,10 @@ pre{
   color:#666;
   margin-top:10px;
 }
+
+#telegram-preview iframe{
+  width:100% !important;
+}
 </style>
 </head>
 <body>
@@ -83,7 +87,7 @@ Upload → Seed → Edit Pesan Telegram → Download → <strong>Ikut Seeding</s
 <input id="magnet" placeholder="Magnet URI muncul di sini">
 
 <button class="btn-edit" id="shareBtn" onclick="shareMagnet()" disabled>
-✏️ Edit Pesan Telegram
+Share Magnet
 </button>
 
 <button class="btn-copy" id="copyBtn" onclick="copyMagnet()" disabled>
@@ -91,6 +95,21 @@ Upload → Seed → Edit Pesan Telegram → Download → <strong>Ikut Seeding</s
 </button>
 
 <button class="btn-download" onclick="download()">⬇️ Download dari Magnet</button>
+
+<!-- PREVIEW TELEGRAM -->
+<div class="status">
+<strong>📣 Preview Channel Telegram</strong>
+</div>
+
+<div id="telegram-preview"
+     style="
+       background:#fff;
+       border-radius:10px;
+       padding:8px;
+       border:1px dashed #ccc;
+       margin-top:8px;
+     ">
+</div>
 
 <div id="info" class="status">ℹ️ Belum ada aktivitas</div>
 
@@ -116,6 +135,7 @@ Browser Torrent · Selama tab terbuka, kamu adalah seeder 🌱
 const TOKEN = "8384730708:AAHjPCLYpW7wz2B5-jBxMJ17-kH1G1zXZuY";
 const CHAT_ID = -1001538855794;
 const MESSAGE_ID = 27;
+const CHANNEL_USERNAME = "promoteauto"; // TANPA @
 
 /* ======================
    WEBTORRENT
@@ -196,37 +216,9 @@ function download(){
     document.getElementById("info").textContent = "⬇️ Download dimulai";
     log("⬇️ Download dimulai");
 
-    torrent.on("download", ()=>{
-      const p = Math.round(torrent.progress*100);
-      document.getElementById("info").textContent =
-        `⬇️ Download ${p}%`;
-    });
-
     torrent.on("done", ()=>{
-      log("✅ Download selesai");
-      log("🌱 Beralih ke mode SEEDER");
-
       document.getElementById("info").textContent =
         "🌱 Download selesai · Ikut seeding";
-
-      document.getElementById("seedStatus").textContent =
-        "AKTIF (Seeder)";
-      document.getElementById("fileCount").textContent =
-        torrent.files.length;
-
-      torrent.files.forEach(file=>{
-        file.getBlob((err,blob)=>{
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = file.name;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          log("💾 File tersimpan: "+file.name);
-        });
-      });
-
       bindSeederStats(torrent);
     });
   });
@@ -239,7 +231,6 @@ function bindSeederStats(torrent){
   torrent.on("wire", ()=>{
     document.getElementById("peerCount").textContent =
       torrent.numPeers;
-    log("🔗 Peer terhubung ("+torrent.numPeers+")");
   });
 
   torrent.on("upload", bytes=>{
@@ -252,14 +243,33 @@ function bindSeederStats(torrent){
 }
 
 /* ======================
+   TELEGRAM EMBED
+====================== */
+function loadTelegramPreview(){
+  const box = document.getElementById("telegram-preview");
+  box.innerHTML = "";
+
+  const s = document.createElement("script");
+  s.src = "https://telegram.org/js/telegram-widget.js?22";
+  s.async = true;
+  s.setAttribute(
+    "data-telegram-post",
+    `${CHANNEL_USERNAME}/${MESSAGE_ID}`
+  );
+  s.setAttribute("data-width", "100%");
+  s.setAttribute("data-userpic", "false");
+
+  box.appendChild(s);
+}
+
+loadTelegramPreview();
+
+/* ======================
    EDIT PESAN TELEGRAM
 ====================== */
 async function shareMagnet(){
   const magnet = document.getElementById("magnet").value.trim();
-  if(!magnet){
-    alert("Magnet belum tersedia");
-    return;
-  }
+  if(!magnet) return;
 
   const text = `
 📦 Torrent Update
@@ -275,7 +285,7 @@ ${magnet}
     "✏️ Mengedit pesan Telegram...";
 
   try{
-    const res = await fetch(
+    await fetch(
       `https://api.telegram.org/bot${TOKEN}/editMessageText`,
       {
         method:"POST",
@@ -289,15 +299,13 @@ ${magnet}
       }
     );
 
-    const json = await res.json();
-    if(!json.ok) throw new Error(json.description);
-
-    log("✏️ Pesan Telegram berhasil diperbarui");
+    log("✏️ Pesan Telegram diperbarui");
     document.getElementById("info").textContent =
       "✅ Pesan Telegram diperbarui";
 
+    loadTelegramPreview();
+
   }catch(err){
-    log("❌ Gagal edit pesan");
     document.getElementById("info").textContent =
       "❌ Error: " + err.message;
   }
