@@ -216,9 +216,44 @@ function download(){
     document.getElementById("info").textContent = "⬇️ Download dimulai";
     log("⬇️ Download dimulai");
 
-    torrent.on("done", ()=>{
+    torrent.on("download", ()=>{
+      const p = Math.round(torrent.progress * 100);
       document.getElementById("info").textContent =
-        "🌱 Download selesai · Ikut seeding";
+        `⬇️ Download ${p}%`;
+    });
+
+    torrent.on("done", ()=>{
+      log("✅ Download selesai");
+      log("💾 Menyimpan file...");
+
+      document.getElementById("info").textContent =
+        "💾 Menyimpan file ke browser...";
+
+      document.getElementById("seedStatus").textContent =
+        "AKTIF (Seeder)";
+      document.getElementById("fileCount").textContent =
+        torrent.files.length;
+
+      // ⬇️⬇️ INI YANG TADI HILANG ⬇️⬇️
+      torrent.files.forEach(file=>{
+        file.getBlob((err, blob)=>{
+          if(err){
+            log("❌ Gagal simpan: " + file.name);
+            return;
+          }
+
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = file.name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+
+          log("💾 File tersimpan: " + file.name);
+        });
+      });
+
       bindSeederStats(torrent);
     });
   });
