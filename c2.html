@@ -2,10 +2,11 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Download dari File .torrent</title>
+<title>Browser Torrent Downloader (Fixed)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/parse-torrent@latest/index.min.js"></script>
 
 <style>
 body{
@@ -31,154 +32,134 @@ button{
   font-weight:600;
   cursor:pointer;
 }
-button:disabled{background:#aaa}
-
 .status{
   background:#e3f2fd;
   padding:12px;
   border-radius:10px;
   margin-top:10px;
 }
-.stats{
-  background:#f1f8e9;
+.warn{
+  background:#fff3cd;
   padding:12px;
   border-radius:10px;
   margin-top:10px;
-  font-size:0.9em;
+  color:#856404;
 }
-.stats div{margin:4px 0}
-
-progress{
-  width:100%;
-  height:20px;
-  margin-top:8px;
-}
-
+progress{width:100%;height:18px}
 pre{
-  background:#111;
-  color:#0f0;
-  padding:10px;
-  border-radius:10px;
-  height:180px;
-  overflow:auto;
-  font-size:12px;
-}
-.footer{
-  text-align:center;
-  font-size:0.8em;
-  color:#666;
-  margin-top:12px;
+  background:#111;color:#0f0;padding:10px;border-radius:10px;
+  height:160px;overflow:auto;font-size:12px;
 }
 </style>
 </head>
 <body>
 
-<h2>⬇️ Download dari File .torrent</h2>
+<h2>⬇️ Browser Torrent Downloader</h2>
 
 <input type="file" id="torrentInput" accept=".torrent">
+<button onclick="start()">Mulai Download</button>
 
-<button onclick="startDownload()">Mulai Download</button>
-
-<div class="status" id="info">ℹ️ Pilih file .torrent</div>
+<div id="info" class="status">ℹ️ Pilih file .torrent</div>
+<div id="warn" class="warn" style="display:none"></div>
 
 <progress id="progress" value="0" max="100"></progress>
 
-<div class="stats">
-  <strong>📊 Status</strong>
-  <div>📦 File: <span id="fileCount">0</span></div>
-  <div>👥 Peer: <span id="peerCount">0</span></div>
-  <div>⬇️ Progress: <span id="percent">0%</span></div>
-  <div>⬆️ Upload: <span id="uploaded">0 B</span></div>
-  <div>⚡ Upload speed: <span id="upSpeed">0 B/s</span></div>
-</div>
-
 <pre id="log"></pre>
-
-<div class="footer">
-Browser Torrent · Setelah selesai kamu otomatis ikut seeding 🌱
-</div>
 
 <script>
 const client = new WebTorrent();
-let uploadedBytes = 0;
 
-const log = msg => {
-  const box = document.getElementById("log");
-  box.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
-  box.scrollTop = box.scrollHeight;
+const WEBRTC_TRACKERS = [
+  "wss://tracker.openwebtorrent.com",
+  "wss://tracker.fastcast.nz",
+  "wss://tracker.btorrent.xyz"
+];
+
+const log = msg=>{
+  const el=document.getElementById("log");
+  el.textContent+=`[${new Date().toLocaleTimeString()}] ${msg}\n`;
+  el.scrollTop=el.scrollHeight;
 };
 
-function format(bytes){
-  if(bytes > 1024*1024) return (bytes/1024/1024).toFixed(2)+" MB";
-  if(bytes > 1024) return (bytes/1024).toFixed(1)+" KB";
-  return bytes+" B";
-}
-
-async function startDownload(){
-  const input = document.getElementById("torrentInput");
+async function start(){
+  const input=document.getElementById("torrentInput");
   if(!input.files.length){
     alert("Pilih file .torrent dulu");
     return;
   }
 
-  const file = input.files[0];
-  const buffer = await file.arrayBuffer();
+  const buf=await input.files[0].arrayBuffer();
+  const parsed=parseTorrent(new Uint8Array(buf));
 
-  document.getElementById("info").textContent =
-    "⬇️ Menghubungi peer...";
-  log("📥 Torrent dimuat: " + file.name);
+  log("📦 Torrent loaded");
+  log("🧲 InfoHash: "+parsed.infoHash);
 
-  client.add(new Uint8Array(buffer), torrent=>{
-    document.getElementById("fileCount").textContent =
-      torrent.files.length;
+  // ==== DETEKSI TRACKER ====
+  const hasWebRTC =
+    parsed.announce &&
+    parsed.announce.some(t=>t.startsWith("wss://"));
 
-    log("🧲 Magnet: " + torrent.magnetURI);
+  if(!hasWebRTC){
+    document.getElementById("warn").style.display="block";
+    document.getElementById("warn").innerHTML =
+      "⚠️ Torrent ini TIDAK memiliki WebRTC tracker.<br>" +
+      "Browser hanya bisa konek ke peer WebRTC.<br>" +
+      "Kemungkinan besar download akan GAGAL.";
+    log("⚠️ Tidak ada WebRTC tracker, inject manual");
+  }
 
-    torrent.on("wire", ()=>{
-      document.getElementById("peerCount").textContent =
-        torrent.numPeers;
+  // ==== INJECT TRACKER ====
+  const opts={
+    announce: Array.from(
+      new Set([...(parsed.announce||[]), ...WEBRTC_TRACKERS])
+    )
+  };
+
+  document.getElementById("info").textContent="🔎 Menghubungi peer WebRTC...";
+  log("🔎 Connecting to peers...");
+
+  client.add(parsed.infoHash, opts, torrent=>{
+    log("🟢 Torrent diterima WebTorrent");
+
+    torrent.on("wire",()=>{
+      document.getElementById("info").textContent=
+        "🟢 Peer ditemukan: "+torrent.numPeers;
+      log("👥 Peer: "+torrent.numPeers);
     });
 
-    torrent.on("download", ()=>{
-      const p = Math.round(torrent.progress * 100);
-      document.getElementById("progress").value = p;
-      document.getElementById("percent").textContent = p + "%";
-      document.getElementById("info").textContent =
-        "⬇️ Download " + p + "%";
+    torrent.on("download",()=>{
+      const p=Math.round(torrent.progress*100);
+      document.getElementById("progress").value=p;
+      document.getElementById("info").textContent=
+        "⬇️ Download "+p+"%";
     });
 
-    torrent.on("done", ()=>{
+    torrent.on("done",()=>{
       log("✅ Download selesai");
-      document.getElementById("info").textContent =
-        "💾 Menyimpan file...";
+      document.getElementById("info").textContent="💾 Menyimpan file";
 
       torrent.files.forEach(f=>{
-        f.getBlob((err, blob)=>{
+        f.getBlob((err,blob)=>{
           if(err){
-            log("❌ Gagal simpan: " + f.name);
+            log("❌ Gagal simpan "+f.name);
             return;
           }
-
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = f.name;
-          document.body.appendChild(a);
+          const a=document.createElement("a");
+          a.href=URL.createObjectURL(blob);
+          a.download=f.name;
           a.click();
-          document.body.removeChild(a);
-
-          log("💾 File tersimpan: " + f.name);
+          log("💾 Tersimpan: "+f.name);
         });
       });
     });
 
-    torrent.on("upload", bytes=>{
-      uploadedBytes += bytes;
-      document.getElementById("uploaded").textContent =
-        format(uploadedBytes);
-      document.getElementById("upSpeed").textContent =
-        format(torrent.uploadSpeed)+"/s";
-    });
+    setTimeout(()=>{
+      if(torrent.numPeers===0){
+        document.getElementById("info").textContent=
+          "❌ Tidak ada peer WebRTC tersedia";
+        log("❌ 0 peer setelah 10 detik");
+      }
+    },10000);
   });
 }
 </script>
