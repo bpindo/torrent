@@ -87,6 +87,54 @@ details p, details ol {
   margin:6px 0 6px 14px;
   font-size:0.9em;
 }
+.btn-row{
+  display:flex;
+  gap:10px;
+}
+
+.btn-row button{
+  width:auto;      /* ⬅️ override width:100% */
+  flex:1;          /* lebar sama */
+  margin:8px 0;    /* tetap rapi */
+}
+/* Baris input */
+.input-row{
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+
+/* Sembunyikan input file asli */
+#fileInput{
+  display:none;
+}
+
+/* Tombol file custom */
+.file-btn{
+  padding:10px 14px;
+  border-radius:10px;
+  background:#e0e0e0;
+  cursor:pointer;
+  font-weight:600;
+  white-space:nowrap;
+}
+
+/* Magnet ambil sisa ruang */
+#magnet{
+  flex:1;
+  min-width:0;
+}
+
+/* Mobile */
+@media (max-width:520px){
+  .input-row{
+    flex-direction:column;
+    align-items:stretch;
+  }
+}
+
+
+
 </style>
 </head>
 <body>
@@ -94,38 +142,48 @@ details p, details ol {
 <h2>📤 WebTorrent P2P Share</h2>
 
 <div class="status">
-Upload → Seed → Edit Pesan Telegram → Download → <strong>Ikut Seeding</strong>
+Aplikasi web peer-to-peer berbasis <strong>WebTorrent</strong> untuk berbagi file langsung dari browser ke browser secara <strong>real-time</strong>.
 </div>
 
-<input type="file" id="fileInput" onchange="autoSeed()">
+<div class="input-row">
+  <label class="file-btn" for="fileInput">
+    📁 Choose File
+  </label>
 
-<input
-  id="magnet"
-  placeholder="Tempel magnet / hash (BTIH)"
-  spellcheck="false"
-  autocomplete="off"
->
+  <input type="file" id="fileInput" onchange="autoSeed()">
+
+  <input
+    type="text"
+    id="magnet"
+    placeholder="Tempel magnet / hash (BTIH)"
+    spellcheck="false"
+    autocomplete="off"
+  >
+</div>
+
+
 
 <div class="status" id="hashInfo" style="display:none">
   🔑 Torrent ID:
   <code id="hashOnly"></code>
 </div>
 
+<div class="btn-row">
+  <button class="btn-edit" id="shareBtn" onclick="shareMagnet()" disabled>
+    📣 Share Torrent
+  </button>
 
-<button class="btn-edit" id="shareBtn" onclick="shareMagnet()" disabled>
-Share Torrent ID
-</button>
-
-<button class="btn-copy" id="copyBtn" onclick="copyMagnet()" disabled>
-  📋 Salin ID Torrent
-</button>
+  <button class="btn-copy" id="copyBtn" onclick="copyMagnet()" disabled>
+    📋 Salin ID
+  </button>
+</div>
 
 
-<button class="btn-download" onclick="download()">⬇️ Download dari Magnet</button>
+<button class="btn-download" onclick="download()">⬇️ Download </button>
 
 <!-- PREVIEW TELEGRAM -->
 <div class="status">
-<strong>📣 Preview Channel Telegram</strong>
+⭐ Disponsori oleh <strong>Kios MadGazan</strong>
 </div>
 
 <div id="telegram-preview"
