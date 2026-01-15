@@ -208,6 +208,36 @@
       font-size: 10px;
     }
   }
+  .log-card {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 0.85em;
+  line-height: 1.45;
+  max-height: 260px;
+  overflow-y: auto;
+  color: #333;
+}
+
+/* setiap pesan */
+.log-card .log-item {
+  padding: 6px 0;
+  border-bottom: 1px dashed rgba(0,0,0,0.08);
+}
+
+.log-card .log-item:last-child {
+  border-bottom: none;
+}
+
+/* waktu pesan */
+.log-card .log-time {
+  font-size: 0.75em;
+  color: #888;
+  margin-bottom: 2px;
+}
+
 </style>
 </head>
 <body>
@@ -235,8 +265,9 @@
 <button class="btn-download" onclick="download()">⬇️ Download</button>
 
 <div class="status">
-  ⭐ Disponsori oleh <strong>Kios MadGazan</strong>
+  🧲 <strong>Bagikan Magnet</strong> agar peer lain bisa terhubung
 </div>
+
 
 <!-- CHAT BOT PREVIEW -->
 <div id="telegram-preview" class="log-card">Log Telegram akan muncul di sini...</div>
@@ -531,19 +562,23 @@ function copyText(button, text) {
             return msg && msg.from && msg.from.is_bot === true;
           });
           if (botMessages.length > 0) {
-            const lastTwo = botMessages.slice(-2).reverse();
-            logContainer.innerHTML = lastTwo
-              .map((u, index) => {
-                const msg = u.message || u.channel_post || u.edited_message;
-                const date = new Date(msg.date * 1000).toLocaleString();
-                const text = msg.text || "(non-text message)";
-                const highlightClass = index === 0 ? "latest" : "";
-                return `<div class="message ${highlightClass}">
-                          <span>[${date}] ${text}</span>
-                          <button class="copyBtn" onclick="copyText(this, \`${text.replace(/`/g, "\\`")}\`)">Copy</button>
-                        </div>`;
-              })
-              .join("");
+            const messages = botMessages.slice(-3).reverse();
+
+logContainer.innerHTML = messages
+  .map((u) => {
+    const msg = u.message || u.channel_post || u.edited_message;
+    const text = msg.text || "";
+    return `
+      <div class="message">
+        <span>${text}</span>
+        <button class="copyBtn" onclick="copyText(this, \`${text.replace(/`/g, "\\`")}\`)">
+          Copy
+        </button>
+      </div>
+    `;
+  })
+  .join("");
+
           } else logContainer.innerHTML = "Tidak ada pesan dari bot.";
         } else logContainer.innerHTML = "Tidak ada pesan.";
       })
