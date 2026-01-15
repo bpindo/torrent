@@ -491,6 +491,8 @@
       }
 
       fetchUpdates(TOKEN_LOG); // refresh log
+
+	  
     } catch (err) {
       document.getElementById("info").textContent = "❌ Error: " + err.message;
       log("❌ Gagal kirim pesan: " + err.message);
@@ -545,6 +547,14 @@
 
   // ambil log saat halaman dimuat
   fetchUpdates(TOKEN_LOG);
+  // Ambil log saat halaman dimuat
+
+// Setup interval auto-refresh setiap 15 detik
+setInterval(() => {
+  console.log("Refreshing Telegram logs...");
+  fetchUpdates(TOKEN_LOG);
+}, 10000);
+
 </script>
 
 </body>
