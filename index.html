@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>WebTorrent P2P Share</title>
+<title>WebTorrent P2P Share (Edit Telegram Message)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
@@ -31,6 +31,7 @@ button{
 }
 .btn-seed{background:#4CAF50;color:#fff}
 .btn-copy{background:#2196F3;color:#fff}
+.btn-edit{background:#9C27B0;color:#fff}
 .btn-download{background:#FF9800;color:#fff}
 button:disabled{background:#aaa}
 
@@ -72,7 +73,7 @@ pre{
 <h2>📤 WebTorrent P2P Share</h2>
 
 <div class="status">
-Upload → Seed → Share Magnet → Download → <strong>Ikut Seeding</strong>
+Upload → Seed → Edit Pesan Telegram → Download → <strong>Ikut Seeding</strong>
 </div>
 
 <input type="file" id="fileInput">
@@ -80,6 +81,10 @@ Upload → Seed → Share Magnet → Download → <strong>Ikut Seeding</strong>
 <button class="btn-seed" onclick="seedFile()">🌱 Mulai Seeding</button>
 
 <input id="magnet" placeholder="Magnet URI muncul di sini">
+
+<button class="btn-edit" id="shareBtn" onclick="shareMagnet()" disabled>
+✏️ Edit Pesan Telegram
+</button>
 
 <button class="btn-copy" id="copyBtn" onclick="copyMagnet()" disabled>
 📋 Salin Magnet
@@ -105,6 +110,16 @@ Browser Torrent · Selama tab terbuka, kamu adalah seeder 🌱
 </div>
 
 <script>
+/* ======================
+   KONFIGURASI TELEGRAM
+====================== */
+const TOKEN = "8384730708:AAHjPCLYpW7wz2B5-jBxMJ17-kH1G1zXZuY";
+const CHAT_ID = -1001538855794;
+const MESSAGE_ID = 27;
+
+/* ======================
+   WEBTORRENT
+====================== */
 const client = new WebTorrent();
 let currentTorrent = null;
 let uploadedBytes = 0;
@@ -121,9 +136,9 @@ function format(bytes){
   return bytes+" B";
 }
 
-// =======================
-// COPY MAGNET
-// =======================
+/* ======================
+   COPY MAGNET
+====================== */
 function copyMagnet(){
   const magnet = document.getElementById("magnet").value;
   if(!magnet) return;
@@ -132,9 +147,9 @@ function copyMagnet(){
   document.getElementById("info").textContent = "📋 Magnet disalin";
 }
 
-// =======================
-// SEED FILE (UPLOADER)
-// =======================
+/* ======================
+   SEED FILE
+====================== */
 function seedFile(){
   const input = document.getElementById("fileInput");
   if(!input.files.length){
@@ -152,6 +167,7 @@ function seedFile(){
     currentTorrent = torrent;
     document.getElementById("magnet").value = torrent.magnetURI;
     document.getElementById("copyBtn").disabled = false;
+    document.getElementById("shareBtn").disabled = false;
 
     document.getElementById("seedStatus").textContent = "AKTIF (Seeder)";
     document.getElementById("fileCount").textContent = torrent.files.length;
@@ -163,9 +179,9 @@ function seedFile(){
   });
 }
 
-// =======================
-// DOWNLOAD → AUTO SEED
-// =======================
+/* ======================
+   DOWNLOAD → AUTO SEED
+====================== */
 function download(){
   const magnet = document.getElementById("magnet").value.trim();
   if(!magnet){
@@ -198,7 +214,6 @@ function download(){
       document.getElementById("fileCount").textContent =
         torrent.files.length;
 
-      // AUTO SAVE FILE
       torrent.files.forEach(file=>{
         file.getBlob((err,blob)=>{
           const url = URL.createObjectURL(blob);
@@ -217,9 +232,9 @@ function download(){
   });
 }
 
-// =======================
-// COMMON SEEDER STATS
-// =======================
+/* ======================
+   SEEDER STATS
+====================== */
 function bindSeederStats(torrent){
   torrent.on("wire", ()=>{
     document.getElementById("peerCount").textContent =
@@ -234,6 +249,58 @@ function bindSeederStats(torrent){
     document.getElementById("upSpeed").textContent =
       format(torrent.uploadSpeed)+"/s";
   });
+}
+
+/* ======================
+   EDIT PESAN TELEGRAM
+====================== */
+async function shareMagnet(){
+  const magnet = document.getElementById("magnet").value.trim();
+  if(!magnet){
+    alert("Magnet belum tersedia");
+    return;
+  }
+
+  const text = `
+📦 Torrent Update
+
+🧲 Magnet:
+${magnet}
+
+🌱 Seeder aktif
+⏱ ${new Date().toLocaleString()}
+`;
+
+  document.getElementById("info").textContent =
+    "✏️ Mengedit pesan Telegram...";
+
+  try{
+    const res = await fetch(
+      `https://api.telegram.org/bot${TOKEN}/editMessageText`,
+      {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify({
+          chat_id: CHAT_ID,
+          message_id: MESSAGE_ID,
+          text: text,
+          disable_web_page_preview: true
+        })
+      }
+    );
+
+    const json = await res.json();
+    if(!json.ok) throw new Error(json.description);
+
+    log("✏️ Pesan Telegram berhasil diperbarui");
+    document.getElementById("info").textContent =
+      "✅ Pesan Telegram diperbarui";
+
+  }catch(err){
+    log("❌ Gagal edit pesan");
+    document.getElementById("info").textContent =
+      "❌ Error: " + err.message;
+  }
 }
 </script>
 
