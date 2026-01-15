@@ -281,7 +281,43 @@ function bindSeederStats(torrent){
 
 // ===== SHARE MAGNET (UNTOUCHED) =====
 async function shareMagnet(){
-  alert("⚠️ Token Telegram masih di frontend (demo only)");
+  const magnet = document.getElementById("magnet").value.trim();
+  if(!magnet){
+    alert("Magnet belum tersedia");
+    return;
+  }
+
+  // ⚠️ FRONTEND TOKEN (DEMO / PRIBADI)
+  const TOKEN = "8384730708:AAHjPCLYpW7wz2B5-jBxMJ17-kH1G1zXZuY";
+  const CHANNEL_ID = "-1003689025820";
+  const URL = `https://api.telegram.org/bot${TOKEN}/sendMessage`;
+
+  document.getElementById("info").textContent =
+    "📤 Mengirim magnet ke Telegram...";
+
+  try{
+    const res = await fetch(URL,{
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: CHANNEL_ID,
+        text: magnet,
+        disable_web_page_preview: true
+      })
+    });
+
+    const json = await res.json();
+    if(!json.ok) throw new Error(json.description);
+
+    log("🚀 Magnet terkirim ke Telegram");
+    document.getElementById("info").textContent =
+      "✅ Magnet berhasil dibagikan";
+
+  }catch(err){
+    log("❌ Gagal kirim magnet");
+    document.getElementById("info").textContent =
+      "❌ Error: " + err.message;
+  }
 }
 </script>
 
