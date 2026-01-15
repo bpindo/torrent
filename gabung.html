@@ -94,6 +94,10 @@ Share Magnet
 📋 Salin Magnet
 </button>
 
+<button class="btn-copy" onclick="pasteMagnet()">
+📥 Paste Magnet
+</button>
+
 <button class="btn-download" onclick="download()">⬇️ Download dari Magnet</button>
 
 <!-- PREVIEW TELEGRAM -->
@@ -165,6 +169,26 @@ function copyMagnet(){
   navigator.clipboard.writeText(magnet);
   log("📋 Magnet disalin");
   document.getElementById("info").textContent = "📋 Magnet disalin";
+}
+
+/* ======================
+   PASTE MAGNET
+====================== */
+async function pasteMagnet(){
+  try{
+    const text = await navigator.clipboard.readText();
+    if(!text){
+      alert("Clipboard kosong");
+      return;
+    }
+
+    document.getElementById("magnet").value = text;
+    log("📥 Magnet dipaste dari clipboard");
+    document.getElementById("info").textContent =
+      "📥 Magnet dipaste dari clipboard";
+  }catch(err){
+    alert("Gagal paste. Pastikan HTTPS & izin clipboard.");
+  }
 }
 
 /* ======================
