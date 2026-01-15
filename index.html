@@ -87,6 +87,54 @@ details p, details ol {
   margin:6px 0 6px 14px;
   font-size:0.9em;
 }
+.btn-row{
+  display:flex;
+  gap:10px;
+}
+
+.btn-row button{
+  width:auto;      /* ⬅️ override width:100% */
+  flex:1;          /* lebar sama */
+  margin:8px 0;    /* tetap rapi */
+}
+/* Baris input */
+.input-row{
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+
+/* Sembunyikan input file asli */
+#fileInput{
+  display:none;
+}
+
+/* Tombol file custom */
+.file-btn{
+  padding:10px 14px;
+  border-radius:10px;
+  background:#e0e0e0;
+  cursor:pointer;
+  font-weight:600;
+  white-space:nowrap;
+}
+
+/* Magnet ambil sisa ruang */
+#magnet{
+  flex:1;
+  min-width:0;
+}
+
+/* Mobile */
+@media (max-width:520px){
+  .input-row{
+    flex-direction:column;
+    align-items:stretch;
+  }
+}
+
+
+
 </style>
 </head>
 <body>
@@ -94,28 +142,48 @@ details p, details ol {
 <h2>📤 WebTorrent P2P Share</h2>
 
 <div class="status">
-Upload → Seed → Edit Pesan Telegram → Download → <strong>Ikut Seeding</strong>
+Aplikasi web peer-to-peer berbasis <strong>WebTorrent</strong> untuk berbagi file langsung dari browser ke browser secara <strong>real-time</strong>.
 </div>
 
-<input type="file" id="fileInput">
+<div class="input-row">
+  <label class="file-btn" for="fileInput">
+    📁 Choose File
+  </label>
 
-<button class="btn-seed" onclick="seedFile()">🌱 Mulai Seeding</button>
+  <input type="file" id="fileInput" onchange="autoSeed()">
 
-<input id="magnet" placeholder="Magnet URI muncul di sini">
+  <input
+    type="text"
+    id="magnet"
+    placeholder="Tempel magnet / hash (BTIH)"
+    spellcheck="false"
+    autocomplete="off"
+  >
+</div>
 
-<button class="btn-edit" id="shareBtn" onclick="shareMagnet()" disabled>
-Share Magnet
-</button>
 
-<button class="btn-copy" id="copyBtn" onclick="copyMagnet()" disabled>
-📋 Salin Magnet
-</button>
 
-<button class="btn-download" onclick="download()">⬇️ Download dari Magnet</button>
+<div class="status" id="hashInfo" style="display:none">
+  🔑 Torrent ID:
+  <code id="hashOnly"></code>
+</div>
+
+<div class="btn-row">
+  <button class="btn-edit" id="shareBtn" onclick="shareMagnet()" disabled>
+    📣 Share Torrent
+  </button>
+
+  <button class="btn-copy" id="copyBtn" onclick="copyMagnet()" disabled>
+    📋 Salin ID
+  </button>
+</div>
+
+
+<button class="btn-download" onclick="download()">⬇️ Download </button>
 
 <!-- PREVIEW TELEGRAM -->
 <div class="status">
-<strong>📣 Preview Channel Telegram</strong>
+⭐ Disponsori oleh <strong>Kios MadGazan</strong>
 </div>
 
 <div id="telegram-preview"
@@ -134,6 +202,8 @@ Share Magnet
   <strong>📊 Status Torrent</strong>
   <div>🟢 Mode: <span id="seedStatus">Tidak aktif</span></div>
   <div>👥 Peer: <span id="peerCount">0</span></div>
+  <div>⬇️ Download: <span id="downloaded">0 B</span></div>
+  <div>⚡ Download speed: <span id="downSpeed">0 B/s</span></div>
   <div>📦 File: <span id="fileCount">0</span></div>
   <div>⬆️ Upload total: <span id="uploaded">0 B</span></div>
   <div>⚡ Upload speed: <span id="upSpeed">0 B/s</span></div>
@@ -141,142 +211,6 @@ Share Magnet
 
 <pre id="log"></pre>
 
-<!-- FAQ ACCORDION -->
-<div class="status" style="background:#ffffff;border:1px solid #ddd;margin-top:16px">
-  <strong>❓ FAQ – Panduan Penggunaan</strong>
-
-  <details open>
-    <summary>Ini website apa sih?</summary>
-    <p>
-      Ini adalah halaman web untuk berbagi file langsung dari browser ke browser
-      tanpa upload ke server atau cloud.
-    </p>
-  </details>
-
-  <details>
-    <summary>Apakah saya harus install aplikasi?</summary>
-    <p>
-      Tidak perlu. Cukup buka halaman ini lewat browser seperti Chrome,
-      Edge, Firefox, atau Safari.
-    </p>
-  </details>
-
-  <details>
-    <summary>File saya di-upload ke mana?</summary>
-    <p>
-      File tidak di-upload ke server mana pun.
-      File tetap berada di perangkat kamu dan dibagikan langsung ke user lain.
-    </p>
-  </details>
-
-  <details>
-    <summary>Apa itu Magnet?</summary>
-    <p>
-      Magnet adalah kode link yang digunakan untuk menemukan file.
-      Bentuknya seperti <code>magnet:?xt=urn:btih...</code>.
-    </p>
-  </details>
-
-  <details>
-    <summary>Bagaimana cara upload / share file?</summary>
-    <ol>
-      <li>Pilih file</li>
-      <li>Klik <b>🌱 Mulai Seeding</b></li>
-      <li>Tunggu magnet muncul</li>
-      <li>Klik <b>Share Magnet</b></li>
-    </ol>
-    <p>
-      Jangan tutup tab browser agar file tetap bisa didownload.
-    </p>
-  </details>
-
-  <details>
-    <summary>Bagaimana cara download file?</summary>
-    <ol>
-      <li>Salin magnet dari Telegram</li>
-      <li>Tempel ke kolom Magnet</li>
-      <li>Klik <b>⬇️ Download</b></li>
-    </ol>
-    <p>
-      File akan otomatis tersimpan setelah download selesai.
-    </p>
-  </details>
-
-  <details>
-    <summary>Kenapa download saya tidak jalan?</summary>
-    <p>
-      Biasanya karena tidak ada seeder yang online
-      atau uploader sudah menutup halaman browser.
-    </p>
-  </details>
-
-  <details>
-    <summary>Apakah aman?</summary>
-    <p>
-      Aman. Tidak ada login, tidak ada akun, dan tidak ada server penyimpan file.
-    </p>
-  </details>
-
-  <details>
-    <summary>Kenapa harus tetap buka tab browser?</summary>
-    <p>
-      Karena browser kamu berfungsi sebagai seeder.
-      Jika tab ditutup, file tidak bisa diakses user lain.
-    </p>
-  </details>
-
-  <details>
-    <summary>Saya pakai HP, kok paste susah?</summary>
-    <p>
-      Ini normal, terutama di iPhone.
-      Tekan & tahan magnet → Salin → Tempel ke kolom magnet.
-    </p>
-  </details>
-
-  <details>
-    <summary>Apakah file besar aman?</summary>
-    <p>
-      Aman, tapi pastikan koneksi stabil dan jangan menutup browser saat proses berjalan.
-    </p>
-  </details>
-
-  <details>
-    <summary>Kalau saya download, apakah ikut upload?</summary>
-    <p>
-      Ya. Setelah download selesai, kamu otomatis ikut menjadi seeder
-      dan membantu user lain.
-    </p>
-  </details>
-
-  <details>
-    <summary>Kenapa ada preview Telegram?</summary>
-    <p>
-      Untuk memudahkan melihat dan menyalin magnet terbaru
-      langsung dari channel Telegram.
-    </p>
-  </details>
-
-  <details>
-    <summary>Apakah ini legal?</summary>
-    <p>
-      Teknologinya legal.
-      Isi file dan penggunaannya menjadi tanggung jawab masing-masing user.
-    </p>
-  </details>
-  
-  <details>
-  <summary>Bolehkah saya menutup halaman ini?</summary>
-  <p>
-    Jika kamu adalah uploader (seeder), jangan tutup halaman ini.
-    Jika kamu hanya download dan sudah selesai, boleh ditutup.
-  </p>
-</details>
-
-</div>
-
-<div class="footer">
-Browser Torrent · Selama tab terbuka, kamu adalah seeder 🌱
-</div>
 
 <script>
 /* ======================
@@ -290,6 +224,13 @@ const CHANNEL_USERNAME = "promoteauto"; // TANPA @
 /* ======================
    WEBTORRENT
 ====================== */
+const TORRENT_TRACKERS = [
+  "wss://tracker.openwebtorrent.com",
+  "wss://tracker.btorrent.xyz",
+  "udp://tracker.opentrackr.org:1337",
+  "udp://explodie.org:6969"
+];
+
 const client = new WebTorrent();
 let currentTorrent = null;
 let uploadedBytes = 0;
@@ -306,16 +247,51 @@ function format(bytes){
   return bytes+" B";
 }
 
+function extractHash(input){
+  if(!input) return null;
+
+  const m = input.match(/btih:([a-f0-9]{40})/i);
+  if(m) return m[1];
+
+  if(/^[a-f0-9]{40}$/i.test(input))
+    return input;
+
+  return null;
+}
+
+
+function buildMagnet(hash, name){
+  let m = `magnet:?xt=urn:btih:${hash}`;
+
+  if(name){
+    m += `&dn=${encodeURIComponent(name)}`;
+  }
+
+  TORRENT_TRACKERS.forEach(tr => {
+    m += `&tr=${encodeURIComponent(tr)}`;
+  });
+
+  return m;
+}
+
+
 /* ======================
    COPY MAGNET
 ====================== */
 function copyMagnet(){
-  const magnet = document.getElementById("magnet").value;
-  if(!magnet) return;
-  navigator.clipboard.writeText(magnet);
-  log("📋 Magnet disalin");
-  document.getElementById("info").textContent = "📋 Magnet disalin";
+  const input = document.getElementById("magnet").value.trim();
+  const hash = extractHash(input);
+  if(!hash) return;
+
+  const text = `magnet:?xt=urn:btih:${hash}`;
+
+  navigator.clipboard.writeText(text);
+  log("📋 Torrent ID disalin");
+  document.getElementById("info").textContent =
+    "📋 Torrent ID disalin";
 }
+
+
 
 /* ======================
    PASTE MAGNET (FIX)
@@ -347,61 +323,99 @@ async function pasteMagnet(){
   }
 }
 
-/* ======================
-   SEED FILE
-====================== */
-function seedFile(){
+function autoSeed(){
   const input = document.getElementById("fileInput");
-  if(!input.files.length){
-    alert("Pilih file dulu");
-    return;
+  if(!input.files.length) return;
+
+  // 🔴 HENTIKAN TORRENT SEBELUMNYA
+  if(currentTorrent){
+    currentTorrent.destroy();
+    currentTorrent = null;
+    log("♻️ Torrent sebelumnya dihentikan");
   }
 
   const file = input.files[0];
   uploadedBytes = 0;
 
   document.getElementById("info").textContent = "🌱 Membuat torrent...";
-  log("📁 File: "+file.name);
+  log("📁 File dipilih: " + file.name);
 
   client.seed(file, torrent=>{
     currentTorrent = torrent;
-    document.getElementById("magnet").value = torrent.magnetURI;
+
+    const hash = torrent.infoHash;
+
+	document.getElementById("magnet").value =
+  `magnet:?xt=urn:btih:${hash}`;
+
+	document.getElementById("hashOnly").textContent = hash;
+	document.getElementById("hashInfo").style.display = "block";
+
     document.getElementById("copyBtn").disabled = false;
     document.getElementById("shareBtn").disabled = false;
 
-    document.getElementById("seedStatus").textContent = "AKTIF (Seeder)";
-    document.getElementById("fileCount").textContent = torrent.files.length;
+    document.getElementById("seedStatus").textContent =
+      "AKTIF (Seeder)";
+    document.getElementById("fileCount").textContent =
+      torrent.files.length;
+
+    document.getElementById("info").textContent =
+      "🧲 Magnet siap & seeding aktif";
 
     log("🧲 Magnet siap");
-    log("🌱 Seeding dimulai");
+    log("🌱 Seeding otomatis dimulai");
 
     bindSeederStats(torrent);
   });
 }
 
+
 /* ======================
    DOWNLOAD → AUTO SEED
 ====================== */
 function download(){
-  const magnet = document.getElementById("magnet").value.trim();
-  if(!magnet){
-    alert("Paste magnet dulu");
+  const input = document.getElementById("magnet").value.trim();
+  const hash = extractHash(input);
+
+  if(!hash){
+    alert("Masukkan magnet atau hash yang valid");
     return;
   }
+
+  const magnet = buildMagnet(hash);
 
   client.add(magnet, torrent=>{
     currentTorrent = torrent;
     uploadedBytes = 0;
 
-    document.getElementById("info").textContent = "⬇️ Download dimulai";
+    /* ✅ SET STATUS AWAL DOWNLOAD */
+    document.getElementById("info").textContent =
+      "⬇️ Download dimulai";
+    document.getElementById("seedStatus").textContent =
+      "⬇️ Downloading";
+    document.getElementById("uploaded").textContent = "0 B";
+    document.getElementById("upSpeed").textContent = "0 B/s";
+
     log("⬇️ Download dimulai");
 
+    /* ✅ UPDATE STATUS SETIAP DATA MASUK */
     torrent.on("download", ()=>{
       const p = Math.round(torrent.progress * 100);
+
       document.getElementById("info").textContent =
         `⬇️ Download ${p}%`;
+
+      document.getElementById("peerCount").textContent =
+        torrent.numPeers;
+
+      document.getElementById("downloaded").textContent =
+        format(torrent.downloaded);
+
+      document.getElementById("downSpeed").textContent =
+        format(torrent.downloadSpeed) + "/s";
     });
 
+    /* ✅ SETELAH DOWNLOAD SELESAI */
     torrent.on("done", ()=>{
       log("✅ Download selesai");
       log("💾 Menyimpan file...");
@@ -414,7 +428,6 @@ function download(){
       document.getElementById("fileCount").textContent =
         torrent.files.length;
 
-      // ⬇️⬇️ INI YANG TADI HILANG ⬇️⬇️
       torrent.files.forEach(file=>{
         file.getBlob((err, blob)=>{
           if(err){
@@ -434,10 +447,12 @@ function download(){
         });
       });
 
+      /* ✅ BARU AKTIFKAN STAT SEEDER */
       bindSeederStats(torrent);
     });
   });
 }
+
 
 /* ======================
    SEEDER STATS
@@ -486,15 +501,11 @@ async function shareMagnet(){
   const magnet = document.getElementById("magnet").value.trim();
   if(!magnet) return;
 
-  const text = `
-📦 Torrent Update
+  const hash = extractHash(magnet);
 
-🧲 Magnet:
-${magnet}
-
-🌱 Seeder aktif
-⏱ ${new Date().toLocaleString()}
+  const text = `${hash}
 `;
+
 
   document.getElementById("info").textContent =
     "✏️ Mengedit pesan Telegram...";
@@ -525,6 +536,7 @@ ${magnet}
       "❌ Error: " + err.message;
   }
 }
+	
 </script>
 
 </body>
