@@ -70,6 +70,23 @@ pre{
 #telegram-preview iframe{
   width:100% !important;
 }
+
+details {
+  margin-top:10px;
+  border-top:1px dashed #ddd;
+  padding-top:6px;
+}
+summary {
+  cursor:pointer;
+  font-weight:600;
+}
+summary::marker {
+  color:#2196F3;
+}
+details p, details ol {
+  margin:6px 0 6px 14px;
+  font-size:0.9em;
+}
 </style>
 </head>
 <body>
@@ -123,6 +140,139 @@ Share Magnet
 </div>
 
 <pre id="log"></pre>
+
+<!-- FAQ ACCORDION -->
+<div class="status" style="background:#ffffff;border:1px solid #ddd;margin-top:16px">
+  <strong>❓ FAQ – Panduan Penggunaan</strong>
+
+  <details open>
+    <summary>Ini website apa sih?</summary>
+    <p>
+      Ini adalah halaman web untuk berbagi file langsung dari browser ke browser
+      tanpa upload ke server atau cloud.
+    </p>
+  </details>
+
+  <details>
+    <summary>Apakah saya harus install aplikasi?</summary>
+    <p>
+      Tidak perlu. Cukup buka halaman ini lewat browser seperti Chrome,
+      Edge, Firefox, atau Safari.
+    </p>
+  </details>
+
+  <details>
+    <summary>File saya di-upload ke mana?</summary>
+    <p>
+      File tidak di-upload ke server mana pun.
+      File tetap berada di perangkat kamu dan dibagikan langsung ke user lain.
+    </p>
+  </details>
+
+  <details>
+    <summary>Apa itu Magnet?</summary>
+    <p>
+      Magnet adalah kode link yang digunakan untuk menemukan file.
+      Bentuknya seperti <code>magnet:?xt=urn:btih...</code>.
+    </p>
+  </details>
+
+  <details>
+    <summary>Bagaimana cara upload / share file?</summary>
+    <ol>
+      <li>Pilih file</li>
+      <li>Klik <b>🌱 Mulai Seeding</b></li>
+      <li>Tunggu magnet muncul</li>
+      <li>Klik <b>Share Magnet</b></li>
+    </ol>
+    <p>
+      Jangan tutup tab browser agar file tetap bisa didownload.
+    </p>
+  </details>
+
+  <details>
+    <summary>Bagaimana cara download file?</summary>
+    <ol>
+      <li>Salin magnet dari Telegram</li>
+      <li>Tempel ke kolom Magnet</li>
+      <li>Klik <b>⬇️ Download</b></li>
+    </ol>
+    <p>
+      File akan otomatis tersimpan setelah download selesai.
+    </p>
+  </details>
+
+  <details>
+    <summary>Kenapa download saya tidak jalan?</summary>
+    <p>
+      Biasanya karena tidak ada seeder yang online
+      atau uploader sudah menutup halaman browser.
+    </p>
+  </details>
+
+  <details>
+    <summary>Apakah aman?</summary>
+    <p>
+      Aman. Tidak ada login, tidak ada akun, dan tidak ada server penyimpan file.
+    </p>
+  </details>
+
+  <details>
+    <summary>Kenapa harus tetap buka tab browser?</summary>
+    <p>
+      Karena browser kamu berfungsi sebagai seeder.
+      Jika tab ditutup, file tidak bisa diakses user lain.
+    </p>
+  </details>
+
+  <details>
+    <summary>Saya pakai HP, kok paste susah?</summary>
+    <p>
+      Ini normal, terutama di iPhone.
+      Tekan & tahan magnet → Salin → Tempel ke kolom magnet.
+    </p>
+  </details>
+
+  <details>
+    <summary>Apakah file besar aman?</summary>
+    <p>
+      Aman, tapi pastikan koneksi stabil dan jangan menutup browser saat proses berjalan.
+    </p>
+  </details>
+
+  <details>
+    <summary>Kalau saya download, apakah ikut upload?</summary>
+    <p>
+      Ya. Setelah download selesai, kamu otomatis ikut menjadi seeder
+      dan membantu user lain.
+    </p>
+  </details>
+
+  <details>
+    <summary>Kenapa ada preview Telegram?</summary>
+    <p>
+      Untuk memudahkan melihat dan menyalin magnet terbaru
+      langsung dari channel Telegram.
+    </p>
+  </details>
+
+  <details>
+    <summary>Apakah ini legal?</summary>
+    <p>
+      Teknologinya legal.
+      Isi file dan penggunaannya menjadi tanggung jawab masing-masing user.
+    </p>
+  </details>
+  
+  <details>
+  <summary>Bolehkah saya menutup halaman ini?</summary>
+  <p>
+    Jika kamu adalah uploader (seeder), jangan tutup halaman ini.
+    Jika kamu hanya download dan sudah selesai, boleh ditutup.
+  </p>
+</details>
+
+</div>
 
 <div class="footer">
 Browser Torrent · Selama tab terbuka, kamu adalah seeder 🌱
