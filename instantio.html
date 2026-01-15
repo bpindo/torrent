@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>WebTorrent P2P Share (Edit Telegram Message)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+
+<style>
+body{
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  padding:14px;
+  max-width:720px;
+  margin:auto;
+  background:#fafafa;
+}
+h2{font-size:1.4em}
+input,button{
+  width:100%;
+  padding:14px;
+  margin:8px 0;
+  font-size:1em;
+  border-radius:10px;
+}
+input{border:1px solid #ccc}
+button{
+  border:none;
+  cursor:pointer;
+  font-weight:600;
+}
+.btn-seed{background:#4CAF50;color:#fff}
+.btn-copy{background:#2196F3;color:#fff}
+.btn-edit{background:#9C27B0;color:#fff}
+.btn-download{background:#FF9800;color:#fff}
+button:disabled{background:#aaa}
+
+.status{
+  background:#e3f2fd;
+  padding:12px;
+  border-radius:10px;
+  margin-top:10px;
+  font-size:0.95em;
+}
+.stats{
+  background:#f1f8e9;
+  padding:12px;
+  border-radius:10px;
+  margin-top:10px;
+  font-size:0.9em;
+}
+.stats div{margin:4px 0}
+
+pre{
+  background:#111;
+  color:#0f0;
+  padding:10px;
+  border-radius:10px;
+  height:200px;
+  overflow:auto;
+  font-size:12px;
+}
+.footer{
+  text-align:center;
+  font-size:0.8em;
+  color:#666;
+  margin-top:10px;
+}
+
+#telegram-preview iframe{
+  width:100% !important;
+}
+
+details {
+  margin-top:10px;
+  border-top:1px dashed #ddd;
+  padding-top:6px;
+}
+summary {
+  cursor:pointer;
+  font-weight:600;
+}
+summary::marker {
+  color:#2196F3;
+}
+details p, details ol {
+  margin:6px 0 6px 14px;
+  font-size:0.9em;
+}
+</style>
+</head>
+<body>
+
+<h2>📤 WebTorrent P2P Share</h2>
+
+<div class="status">
+Upload → Seed → Edit Pesan Telegram → Download → <strong>Ikut Seeding</strong>
+</div>
+
+<input type="file" id="fileInput">
+
+<button class="btn-seed" onclick="seedFile()">🌱 Mulai Seeding</button>
+
+<input id="magnet" placeholder="Magnet URI muncul di sini">
+
+<button class="btn-edit" id="shareBtn" onclick="shareMagnet()" disabled>
+Share Magnet
+</button>
+
+<button class="btn-copy" id="copyBtn" onclick="copyMagnet()" disabled>
+📋 Salin Magnet
+</button>
+
+<button class="btn-download" onclick="download()">⬇️ Download dari Magnet</button>
+
+<!-- PREVIEW TELEGRAM -->
+<div class="status">
+<strong>📣 Preview Channel Telegram</strong>
+</div>
+
+<div id="telegram-preview"
+     style="
+       background:#fff;
+       border-radius:10px;
+       padding:8px;
+       border:1px dashed #ccc;
+       margin-top:8px;
+     ">
+</div>
+
+<div id="info" class="status">ℹ️ Belum ada aktivitas</div>
+
+<div class="stats">
+  <strong>📊 Status Torrent</strong>
+  <div>🟢 Mode: <span id="seedStatus">Tidak aktif</span></div>
+  <div>👥 Peer: <span id="peerCount">0</span></div>
+  <div>📦 File: <span id="fileCount">0</span></div>
+  <div>⬆️ Upload total: <span id="uploaded">0 B</span></div>
+  <div>⚡ Upload speed: <span id="upSpeed">0 B/s</span></div>
+</div>
+
+<pre id="log"></pre>
+
+<!-- FAQ ACCORDION -->
+<div class="status" style="background:#ffffff;border:1px solid #ddd;margin-top:16px">
+  <strong>❓ FAQ – Panduan Penggunaan</strong>
+
+  <details open>
+    <summary>Ini website apa sih?</summary>
+    <p>
+      Ini adalah halaman web untuk berbagi file langsung dari browser ke browser
+      tanpa upload ke server atau cloud.
+    </p>
+  </details>
+
+  <details>
+    <summary>Apakah saya harus install aplikasi?</summary>
+    <p>
+      Tidak perlu. Cukup buka halaman ini lewat browser seperti Chrome,
+      Edge, Firefox, atau Safari.
+    </p>
+  </details>
+
+  <details>
+    <summary>File saya di-upload ke mana?</summary>
+    <p>
+      File tidak di-upload ke server mana pun.
+      File tetap berada di perangkat kamu dan dibagikan langsung ke user lain.
+    </p>
+  </details>
+
+  <details>
+    <summary>Apa itu Magnet?</summary>
+    <p>
+      Magnet adalah kode link yang digunakan untuk menemukan file.
+      Bentuknya seperti <code>magnet:?xt=urn:btih...</code>.
+    </p>
+  </details>
+
+  <details>
+    <summary>Bagaimana cara upload / share file?</summary>
+    <ol>
+      <li>Pilih file</li>
+      <li>Klik <b>🌱 Mulai Seeding</b></li>
+      <li>Tunggu magnet muncul</li>
+      <li>Klik <b>Share Magnet</b></li>
+    </ol>
+    <p>
+      Jangan tutup tab browser agar file tetap bisa didownload.
+    </p>
+  </details>
+
+  <details>
+    <summary>Bagaimana cara download file?</summary>
+    <ol>
+      <li>Salin magnet dari Telegram</li>
+      <li>Tempel ke kolom Magnet</li>
+      <li>Klik <b>⬇️ Download</b></li>
+    </ol>
+    <p>
+      File akan otomatis tersimpan setelah download selesai.
+    </p>
+  </details>
+
+  <details>
+    <summary>Kenapa download saya tidak jalan?</summary>
+    <p>
+      Biasanya karena tidak ada seeder yang online
+      atau uploader sudah menutup halaman browser.
+    </p>
+  </details>
+
+  <details>
+    <summary>Apakah aman?</summary>
+    <p>
+      Aman. Tidak ada login, tidak ada akun, dan tidak ada server penyimpan file.
+    </p>
+  </details>
+
+  <details>
+    <summary>Kenapa harus tetap buka tab browser?</summary>
+    <p>
+      Karena browser kamu berfungsi sebagai seeder.
+      Jika tab ditutup, file tidak bisa diakses user lain.
+    </p>
+  </details>
+
+  <details>
+    <summary>Saya pakai HP, kok paste susah?</summary>
+    <p>
+      Ini normal, terutama di iPhone.
+      Tekan & tahan magnet → Salin → Tempel ke kolom magnet.
+    </p>
+  </details>
+
+  <details>
+    <summary>Apakah file besar aman?</summary>
+    <p>
+      Aman, tapi pastikan koneksi stabil dan jangan menutup browser saat proses berjalan.
+    </p>
+  </details>
+
+  <details>
+    <summary>Kalau saya download, apakah ikut upload?</summary>
+    <p>
+      Ya. Setelah download selesai, kamu otomatis ikut menjadi seeder
+      dan membantu user lain.
+    </p>
+  </details>
+
+  <details>
+    <summary>Kenapa ada preview Telegram?</summary>
+    <p>
+      Untuk memudahkan melihat dan menyalin magnet terbaru
+      langsung dari channel Telegram.
+    </p>
+  </details>
+
+  <details>
+    <summary>Apakah ini legal?</summary>
+    <p>
+      Teknologinya legal.
+      Isi file dan penggunaannya menjadi tanggung jawab masing-masing user.
+    </p>
+  </details>
+  
+  <details>
+  <summary>Bolehkah saya menutup halaman ini?</summary>
+  <p>
+    Jika kamu adalah uploader (seeder), jangan tutup halaman ini.
+    Jika kamu hanya download dan sudah selesai, boleh ditutup.
+  </p>
+</details>
+
+</div>
+
+<div class="footer">
+Browser Torrent · Selama tab terbuka, kamu adalah seeder 🌱
+</div>
+
+<script>
+/* ======================
+   KONFIGURASI TELEGRAM
+====================== */
+const TOKEN = "8384730708:AAHjPCLYpW7wz2B5-jBxMJ17-kH1G1zXZuY";
+const CHAT_ID = -1001538855794;
+const MESSAGE_ID = 27;
+const CHANNEL_USERNAME = "promoteauto"; // TANPA @
+
+/* ======================
+   WEBTORRENT
+====================== */
+const client = new WebTorrent();
+let currentTorrent = null;
+let uploadedBytes = 0;
+
+const log = msg => {
+  const p = document.getElementById("log");
+  p.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+  p.scrollTop = p.scrollHeight;
+};
+
+function format(bytes){
+  if(bytes > 1024*1024) return (bytes/1024/1024).toFixed(2)+" MB";
+  if(bytes > 1024) return (bytes/1024).toFixed(1)+" KB";
+  return bytes+" B";
+}
+
+/* ======================
+   COPY MAGNET
+====================== */
+function copyMagnet(){
+  const magnet = document.getElementById("magnet").value;
+  if(!magnet) return;
+  navigator.clipboard.writeText(magnet);
+  log("📋 Magnet disalin");
+  document.getElementById("info").textContent = "📋 Magnet disalin";
+}
+
+/* ======================
+   PASTE MAGNET (FIX)
+====================== */
+async function pasteMagnet(){
+  try{
+    const text = await navigator.clipboard.readText();
+
+    if(!text){
+      alert("Clipboard kosong");
+      return;
+    }
+
+    if(!text.trim().startsWith("magnet:?")){
+      alert("Isi clipboard bukan magnet URI");
+      return;
+    }
+
+    const input = document.getElementById("magnet");
+    input.value = text.trim();
+    input.focus();
+
+    log("📥 Magnet dipaste ke kolom");
+    document.getElementById("info").textContent =
+      "📥 Magnet dipaste ke kolom magnet";
+
+  }catch(err){
+    alert("Gagal paste. Pastikan HTTPS & izin clipboard.");
+  }
+}
+
+/* ======================
+   SEED FILE
+====================== */
+function seedFile(){
+  const input = document.getElementById("fileInput");
+  if(!input.files.length){
+    alert("Pilih file dulu");
+    return;
+  }
+
+  const file = input.files[0];
+  uploadedBytes = 0;
+
+  document.getElementById("info").textContent = "🌱 Membuat torrent...";
+  log("📁 File: "+file.name);
+
+  client.seed(file, torrent=>{
+    currentTorrent = torrent;
+    document.getElementById("magnet").value = torrent.magnetURI;
+    document.getElementById("copyBtn").disabled = false;
+    document.getElementById("shareBtn").disabled = false;
+
+    document.getElementById("seedStatus").textContent = "AKTIF (Seeder)";
+    document.getElementById("fileCount").textContent = torrent.files.length;
+
+    log("🧲 Magnet siap");
+    log("🌱 Seeding dimulai");
+
+    bindSeederStats(torrent);
+  });
+}
+
+/* ======================
+   DOWNLOAD → AUTO SEED
+====================== */
+function download(){
+  const magnet = document.getElementById("magnet").value.trim();
+  if(!magnet){
+    alert("Paste magnet dulu");
+    return;
+  }
+
+  client.add(magnet, torrent=>{
+    currentTorrent = torrent;
+    uploadedBytes = 0;
+
+    document.getElementById("info").textContent = "⬇️ Download dimulai";
+    log("⬇️ Download dimulai");
+
+    torrent.on("download", ()=>{
+      const p = Math.round(torrent.progress * 100);
+      document.getElementById("info").textContent =
+        `⬇️ Download ${p}%`;
+    });
+
+    torrent.on("done", ()=>{
+      log("✅ Download selesai");
+      log("💾 Menyimpan file...");
+
+      document.getElementById("info").textContent =
+        "💾 Menyimpan file ke browser...";
+
+      document.getElementById("seedStatus").textContent =
+        "AKTIF (Seeder)";
+      document.getElementById("fileCount").textContent =
+        torrent.files.length;
+
+      // ⬇️⬇️ INI YANG TADI HILANG ⬇️⬇️
+      torrent.files.forEach(file=>{
+        file.getBlob((err, blob)=>{
+          if(err){
+            log("❌ Gagal simpan: " + file.name);
+            return;
+          }
+
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = file.name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+
+          log("💾 File tersimpan: " + file.name);
+        });
+      });
+
+      bindSeederStats(torrent);
+    });
+  });
+}
+
+/* ======================
+   SEEDER STATS
+====================== */
+function bindSeederStats(torrent){
+  torrent.on("wire", ()=>{
+    document.getElementById("peerCount").textContent =
+      torrent.numPeers;
+  });
+
+  torrent.on("upload", bytes=>{
+    uploadedBytes += bytes;
+    document.getElementById("uploaded").textContent =
+      format(uploadedBytes);
+    document.getElementById("upSpeed").textContent =
+      format(torrent.uploadSpeed)+"/s";
+  });
+}
+
+/* ======================
+   TELEGRAM EMBED
+====================== */
+function loadTelegramPreview(){
+  const box = document.getElementById("telegram-preview");
+  box.innerHTML = "";
+
+  const s = document.createElement("script");
+  s.src = "https://telegram.org/js/telegram-widget.js?22";
+  s.async = true;
+  s.setAttribute(
+    "data-telegram-post",
+    `${CHANNEL_USERNAME}/${MESSAGE_ID}`
+  );
+  s.setAttribute("data-width", "100%");
+  s.setAttribute("data-userpic", "false");
+
+  box.appendChild(s);
+}
+
+loadTelegramPreview();
+
+/* ======================
+   EDIT PESAN TELEGRAM
+====================== */
+async function shareMagnet(){
+  const magnet = document.getElementById("magnet").value.trim();
+  if(!magnet) return;
+
+  const text = `
+📦 Torrent Update
+
+🧲 Magnet:
+${magnet}
+
+🌱 Seeder aktif
+⏱ ${new Date().toLocaleString()}
+`;
+
+  document.getElementById("info").textContent =
+    "✏️ Mengedit pesan Telegram...";
+
+  try{
+    await fetch(
+      `https://api.telegram.org/bot${TOKEN}/editMessageText`,
+      {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify({
+          chat_id: CHAT_ID,
+          message_id: MESSAGE_ID,
+          text: text,
+          disable_web_page_preview: true
+        })
+      }
+    );
+
+    log("✏️ Pesan Telegram diperbarui");
+    document.getElementById("info").textContent =
+      "✅ Pesan Telegram diperbarui";
+
+    loadTelegramPreview();
+
+  }catch(err){
+    document.getElementById("info").textContent =
+      "❌ Error: " + err.message;
+  }
+}
+
+function openInstantPopup(){
+  const magnet = document.getElementById("magnet").value.trim()
+  if(!magnet){
+    alert("Magnet belum tersedia")
+    return
+  }
+
+  // Ambil info hash
+  const m = magnet.match(/btih:([a-fA-F0-9]+)/)
+  if(!m){
+    alert("Magnet tidak valid")
+    return
+  }
+
+  const hash = m[1]
+  const url = "https://instant.io/#" + hash
+
+  // Popup kecil
+  const w = 520
+  const h = 600
+  const x = (screen.width - w) / 2
+  const y = (screen.height - h) / 2
+
+  window.open(
+    url,
+    "instantio",
+    `width=${w},height=${h},left=${x},top=${y},resizable=yes,scrollbars=yes`
+  )
+}
+</script>
+
+<div style="text-align:center;margin-top:16px">
+  <button
+    onclick="openInstantPopup()"
+    style="
+      background:#000;
+      color:#fff;
+      padding:12px 18px;
+      border-radius:10px;
+      font-size:1em;
+      cursor:pointer;
+    ">
+    ⚡ Buka di Instant.io
+  </button>
+</div>
+
+
+</body>
+</html>
