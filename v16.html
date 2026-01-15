@@ -797,7 +797,7 @@ function stopTrackerOnlyHelper() {
     log("🧠 Helper pasif dihentikan");
   }
 
-  // 🧠 AUTO RESUME jika voluntary masih aktif & tidak ada torrent aktif
+  // 🧠 AUTO RESUME jika voluntary masih aktif & tidak ada torrent akti
   if (VOLUNTARY_ENABLED && !currentTorrent) {
     setTimeout(startTrackerOnlyHelper, 1500);
   }
