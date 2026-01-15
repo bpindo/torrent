@@ -172,20 +172,30 @@ function copyMagnet(){
 }
 
 /* ======================
-   PASTE MAGNET
+   PASTE MAGNET (FIX)
 ====================== */
 async function pasteMagnet(){
   try{
     const text = await navigator.clipboard.readText();
+
     if(!text){
       alert("Clipboard kosong");
       return;
     }
 
-    document.getElementById("magnet").value = text;
-    log("📥 Magnet dipaste dari clipboard");
+    if(!text.trim().startsWith("magnet:?")){
+      alert("Isi clipboard bukan magnet URI");
+      return;
+    }
+
+    const input = document.getElementById("magnet");
+    input.value = text.trim();
+    input.focus();
+
+    log("📥 Magnet dipaste ke kolom");
     document.getElementById("info").textContent =
-      "📥 Magnet dipaste dari clipboard";
+      "📥 Magnet dipaste ke kolom magnet";
+
   }catch(err){
     alert("Gagal paste. Pastikan HTTPS & izin clipboard.");
   }
