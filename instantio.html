@@ -310,12 +310,22 @@ function format(bytes){
    COPY MAGNET
 ====================== */
 function copyMagnet(){
-  const magnet = document.getElementById("magnet").value;
-  if(!magnet) return;
-  navigator.clipboard.writeText(magnet);
-  log("📋 Magnet disalin");
-  document.getElementById("info").textContent = "📋 Magnet disalin";
+  const input = document.getElementById("magnet");
+  if(!input.value) return;
+
+  input.select();
+  input.setSelectionRange(0, 99999);
+
+  try{
+    document.execCommand("copy");
+    log("📋 Magnet disalin (fallback)");
+    document.getElementById("info").textContent =
+      "📋 Magnet disalin";
+  }catch(e){
+    alert("Gagal menyalin magnet");
+  }
 }
+
 
 /* ======================
    PASTE MAGNET (FIX)
