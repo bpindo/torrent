@@ -2,541 +2,310 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>WebTorrent P2P Share (Edit Telegram Message)</title>
+<title>WebTorrent P2P Share + Chat</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
 
 <style>
 body{
   font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
   padding:14px;
-  max-width:720px;
+  max-width:900px;
   margin:auto;
   background:#fafafa;
 }
 h2{font-size:1.4em}
 input,button{
   width:100%;
-  padding:14px;
-  margin:8px 0;
+  padding:12px;
+  margin:6px 0;
   font-size:1em;
   border-radius:10px;
 }
 input{border:1px solid #ccc}
-button{
-  border:none;
-  cursor:pointer;
-  font-weight:600;
-}
+button{border:none;cursor:pointer;font-weight:600}
+button:disabled{background:#aaa}
+
+.btn-row{display:flex;gap:10px}
+.btn-row button{flex:1}
+
 .btn-seed{background:#4CAF50;color:#fff}
 .btn-copy{background:#2196F3;color:#fff}
 .btn-edit{background:#9C27B0;color:#fff}
 .btn-download{background:#FF9800;color:#fff}
-button:disabled{background:#aaa}
 
-.status{
+.status,.stats{
   background:#e3f2fd;
-  padding:12px;
-  border-radius:10px;
-  margin-top:10px;
-  font-size:0.95em;
-}
-.stats{
-  background:#f1f8e9;
-  padding:12px;
-  border-radius:10px;
-  margin-top:10px;
-  font-size:0.9em;
-}
-.stats div{margin:4px 0}
-
-pre{
-  background:#111;
-  color:#0f0;
   padding:10px;
   border-radius:10px;
-  height:200px;
-  overflow:auto;
-  font-size:12px;
-}
-.footer{
-  text-align:center;
-  font-size:0.8em;
-  color:#666;
   margin-top:10px;
-}
-
-#telegram-preview iframe{
-  width:100% !important;
-}
-
-details {
-  margin-top:10px;
-  border-top:1px dashed #ddd;
-  padding-top:6px;
-}
-summary {
-  cursor:pointer;
-  font-weight:600;
-}
-summary::marker {
-  color:#2196F3;
-}
-details p, details ol {
-  margin:6px 0 6px 14px;
   font-size:0.9em;
 }
-.btn-row{
-  display:flex;
-  gap:10px;
+.stats{background:#f1f8e9}
+
+pre{
+  background:#111;color:#0f0;
+  padding:10px;border-radius:10px;
+  height:160px;overflow:auto;font-size:12px
 }
 
-.btn-row button{
-  width:auto;      /* ⬅️ override width:100% */
-  flex:1;          /* lebar sama */
-  margin:8px 0;    /* tetap rapi */
-}
-/* Baris input */
-.input-row{
-  display:flex;
-  gap:10px;
-  align-items:center;
-}
-
-/* Sembunyikan input file asli */
-#fileInput{
-  display:none;
-}
-
-/* Tombol file custom */
+.input-row{display:flex;gap:10px}
+#fileInput{display:none}
 .file-btn{
   padding:10px 14px;
-  border-radius:10px;
   background:#e0e0e0;
+  border-radius:10px;
   cursor:pointer;
   font-weight:600;
-  white-space:nowrap;
 }
 
-/* Magnet ambil sisa ruang */
-#magnet{
-  flex:1;
-  min-width:0;
+.chat-box{
+  margin-top:14px;
+  background:#fff;
+  border:1px solid #ddd;
+  border-radius:10px;
+  padding:10px;
 }
-
-/* Mobile */
-@media (max-width:520px){
-  .input-row{
-    flex-direction:column;
-    align-items:stretch;
-  }
+#chatLog{
+  height:160px;
+  overflow:auto;
+  font-size:0.9em;
+  border:1px solid #ddd;
+  padding:6px;
+  margin-bottom:6px;
 }
-
-
-
 </style>
 </head>
+
 <body>
 
 <h2>📤 WebTorrent P2P Share</h2>
 
 <div class="status">
-Aplikasi web peer-to-peer berbasis <strong>WebTorrent</strong> untuk berbagi file langsung dari browser ke browser secara <strong>real-time</strong>.
+Berbagi file + chat publik langsung antar browser (P2P)
 </div>
 
 <div class="input-row">
-  <label class="file-btn" for="fileInput">
-    📁 Choose File
-  </label>
-
+  <label class="file-btn" for="fileInput">📁 Choose File</label>
   <input type="file" id="fileInput" onchange="autoSeed()">
-
-  <input
-    type="text"
-    id="magnet"
-    placeholder="Tempel magnet / hash (BTIH)"
-    spellcheck="false"
-    autocomplete="off"
-  >
-</div>
-
-
-
-<div class="status" id="hashInfo" style="display:none">
-  🔑 Torrent ID:
-  <code id="hashOnly"></code>
+  <input id="magnet" placeholder="Tempel magnet / hash (BTIH)">
 </div>
 
 <div class="btn-row">
-  <button class="btn-edit" id="shareBtn" onclick="shareMagnet()" disabled>
-    📣 Share Torrent
-  </button>
-
-  <button class="btn-copy" id="copyBtn" onclick="copyMagnet()" disabled>
-    📋 Salin ID
-  </button>
-</div>
-
-
-<button class="btn-download" onclick="download()">⬇️ Download </button>
-
-<!-- PREVIEW TELEGRAM -->
-<div class="status">
-⭐ Disponsori oleh <strong>Kios MadGazan</strong>
-</div>
-
-<div id="telegram-preview"
-     style="
-       background:#fff;
-       border-radius:10px;
-       padding:8px;
-       border:1px dashed #ccc;
-       margin-top:8px;
-     ">
+  <button class="btn-download" onclick="download()">⬇️ Download</button>
+  <button class="btn-copy" onclick="copyMagnet()" id="copyBtn" disabled>📋 Copy</button>
+  <button class="btn-edit" onclick="shareMagnet()" id="shareBtn" disabled>📣 Share</button>
 </div>
 
 <div id="info" class="status">ℹ️ Belum ada aktivitas</div>
 
 <div class="stats">
-  <strong>📊 Status Torrent</strong>
-  <div>🟢 Mode: <span id="seedStatus">Tidak aktif</span></div>
-  <div>👥 Peer: <span id="peerCount">0</span></div>
+  <div>Mode: <span id="seedStatus">Idle</span></div>
+  <div>Peer: <span id="peerCount">0</span></div>
   <div>⬇️ Download: <span id="downloaded">0 B</span></div>
-  <div>⚡ Download speed: <span id="downSpeed">0 B/s</span></div>
-  <div>📦 File: <span id="fileCount">0</span></div>
-  <div>⬆️ Upload total: <span id="uploaded">0 B</span></div>
-  <div>⚡ Upload speed: <span id="upSpeed">0 B/s</span></div>
+  <div>⚡ Down Speed: <span id="downSpeed">0 B/s</span></div>
+  <div>⬆️ Upload: <span id="uploaded">0 B</span></div>
+  <div>⚡ Up Speed: <span id="upSpeed">0 B/s</span></div>
 </div>
 
 <pre id="log"></pre>
 
+<!-- CHAT -->
+<div class="chat-box">
+  <strong>💬 Chat Publik (P2P)</strong>
+  <div id="chatLog"></div>
+  <input id="chatInput" placeholder="Ketik pesan">
+  <button onclick="sendChat()">Kirim</button>
+</div>
+
+<!-- TELEGRAM PREVIEW -->
+<div class="status">
+⭐ Disponsori oleh <strong>Kios MadGazan</strong>
+</div>
+<div id="telegram-preview"></div>
 
 <script>
 /* ======================
-   KONFIGURASI TELEGRAM
+   CONFIG
 ====================== */
-const TOKEN = "8384730708:AAHjPCLYpW7wz2B5-jBxMJ17-kH1G1zXZuY";
-const CHAT_ID = -1001538855794;
-const MESSAGE_ID = 27;
-const CHANNEL_USERNAME = "promoteauto"; // TANPA @
+// ⚠️ INSECURE: pindahkan ke backend jika publik
+const TOKEN = "PASTE_TOKEN_KAMU";
+const CHAT_ID = -1001234567890;
+const MESSAGE_ID = 1;
+const CHANNEL_USERNAME = "channelname";
 
-/* ======================
-   WEBTORRENT
-====================== */
-const TORRENT_TRACKERS = [
+const TRACKERS = [
   "wss://tracker.openwebtorrent.com",
-  "wss://tracker.btorrent.xyz",
-  "udp://tracker.opentrackr.org:1337",
-  "udp://explodie.org:6969"
+  "wss://tracker.btorrent.xyz"
 ];
 
 const client = new WebTorrent();
 let currentTorrent = null;
 let uploadedBytes = 0;
+const peers = new Set();
+const USERNAME = "Anon-" + Math.floor(Math.random()*1000);
 
+/* ======================
+   UTIL
+====================== */
 const log = msg => {
   const p = document.getElementById("log");
   p.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
   p.scrollTop = p.scrollHeight;
 };
+const format = b =>
+  b>1024*1024?(b/1024/1024).toFixed(2)+" MB":
+  b>1024?(b/1024).toFixed(1)+" KB":b+" B";
 
-function format(bytes){
-  if(bytes > 1024*1024) return (bytes/1024/1024).toFixed(2)+" MB";
-  if(bytes > 1024) return (bytes/1024).toFixed(1)+" KB";
-  return bytes+" B";
-}
-
-function extractHash(input){
-  if(!input) return null;
-
-  const m = input.match(/btih:([a-f0-9]{40})/i);
+const extractHash = t => {
+  const m = t.match(/btih:([a-f0-9]{40})/i);
   if(m) return m[1];
-
-  if(/^[a-f0-9]{40}$/i.test(input))
-    return input;
-
+  if(/^[a-f0-9]{40}$/i.test(t)) return t;
   return null;
-}
+};
+const buildMagnet = h =>
+  `magnet:?xt=urn:btih:${h}` +
+  TRACKERS.map(t=>`&tr=${encodeURIComponent(t)}`).join("");
 
+/* ======================
+   CHAT
+====================== */
+function bindChat(torrent){
+  torrent.on("wire", wire=>{
+    peers.add(wire);
+    peerCount.textContent = torrent.numPeers;
+    log("💬 Peer join");
 
-function buildMagnet(hash, name){
-  let m = `magnet:?xt=urn:btih:${hash}`;
+    wire.on("close",()=>{
+      peers.delete(wire);
+      log("👋 Peer leave");
+    });
 
-  if(name){
-    m += `&dn=${encodeURIComponent(name)}`;
-  }
-
-  TORRENT_TRACKERS.forEach(tr => {
-    m += `&tr=${encodeURIComponent(tr)}`;
+    wire.on("message", data=>{
+      try{
+        const m = JSON.parse(data.toString());
+        if(m.type==="chat") renderChat(m);
+      }catch(e){}
+    });
   });
-
-  return m;
 }
 
+function sendChat(){
+  if(!chatInput.value.trim()) return;
+  const msg = {
+    type:"chat",
+    user:USERNAME,
+    msg:chatInput.value,
+    time:Date.now()
+  };
+  const payload = JSON.stringify(msg);
+  peers.forEach(w=>w.send(payload));
+  renderChat(msg);
+  chatInput.value="";
+}
+
+function renderChat(m){
+  const d = document.createElement("div");
+  d.textContent =
+    `[${new Date(m.time).toLocaleTimeString()}] ${m.user}: ${m.msg}`;
+  chatLog.appendChild(d);
+  chatLog.scrollTop = chatLog.scrollHeight;
+}
 
 /* ======================
-   COPY MAGNET
+   TORRENT
 ====================== */
-function copyMagnet(){
-  const input = document.getElementById("magnet").value.trim();
-  const hash = extractHash(input);
-  if(!hash) return;
-
-  const text = `magnet:?xt=urn:btih:${hash}`;
-
-  navigator.clipboard.writeText(text);
-  log("📋 Torrent ID disalin");
-  document.getElementById("info").textContent =
-    "📋 Torrent ID disalin";
-}
-
-
-
-/* ======================
-   PASTE MAGNET (FIX)
-====================== */
-async function pasteMagnet(){
-  try{
-    const text = await navigator.clipboard.readText();
-
-    if(!text){
-      alert("Clipboard kosong");
-      return;
-    }
-
-    if(!text.trim().startsWith("magnet:?")){
-      alert("Isi clipboard bukan magnet URI");
-      return;
-    }
-
-    const input = document.getElementById("magnet");
-    input.value = text.trim();
-    input.focus();
-
-    log("📥 Magnet dipaste ke kolom");
-    document.getElementById("info").textContent =
-      "📥 Magnet dipaste ke kolom magnet";
-
-  }catch(err){
-    alert("Gagal paste. Pastikan HTTPS & izin clipboard.");
-  }
-}
-
 function autoSeed(){
-  const input = document.getElementById("fileInput");
-  if(!input.files.length) return;
-
-  // 🔴 HENTIKAN TORRENT SEBELUMNYA
-  if(currentTorrent){
-    currentTorrent.destroy();
-    currentTorrent = null;
-    log("♻️ Torrent sebelumnya dihentikan");
-  }
-
-  const file = input.files[0];
+  if(currentTorrent) currentTorrent.destroy();
   uploadedBytes = 0;
 
-  document.getElementById("info").textContent = "🌱 Membuat torrent...";
-  log("📁 File dipilih: " + file.name);
+  const file = fileInput.files[0];
+  info.textContent = "🌱 Membuat torrent...";
+  log("🌱 Seeding " + file.name);
 
   client.seed(file, torrent=>{
     currentTorrent = torrent;
+    bindChat(torrent);
 
-    const hash = torrent.infoHash;
+    magnet.value = buildMagnet(torrent.infoHash);
+    copyBtn.disabled = shareBtn.disabled = false;
+    seedStatus.textContent = "Seeder";
 
-	document.getElementById("magnet").value =
-  `magnet:?xt=urn:btih:${hash}`;
-
-	document.getElementById("hashOnly").textContent = hash;
-	document.getElementById("hashInfo").style.display = "block";
-
-    document.getElementById("copyBtn").disabled = false;
-    document.getElementById("shareBtn").disabled = false;
-
-    document.getElementById("seedStatus").textContent =
-      "AKTIF (Seeder)";
-    document.getElementById("fileCount").textContent =
-      torrent.files.length;
-
-    document.getElementById("info").textContent =
-      "🧲 Magnet siap & seeding aktif";
-
-    log("🧲 Magnet siap");
-    log("🌱 Seeding otomatis dimulai");
-
-    bindSeederStats(torrent);
+    torrent.on("upload", b=>{
+      uploadedBytes += b;
+      uploaded.textContent = format(uploadedBytes);
+      upSpeed.textContent = format(torrent.uploadSpeed)+"/s";
+    });
   });
 }
 
-
-/* ======================
-   DOWNLOAD → AUTO SEED
-====================== */
 function download(){
-  const input = document.getElementById("magnet").value.trim();
-  const hash = extractHash(input);
+  if(currentTorrent) currentTorrent.destroy();
+  uploadedBytes = 0;
 
-  if(!hash){
-    alert("Masukkan magnet atau hash yang valid");
-    return;
-  }
+  const h = extractHash(magnet.value.trim());
+  if(!h) return alert("Magnet/hash tidak valid");
 
-  const magnet = buildMagnet(hash);
-
-  client.add(magnet, torrent=>{
+  client.add(buildMagnet(h), torrent=>{
     currentTorrent = torrent;
-    uploadedBytes = 0;
+    bindChat(torrent);
+    seedStatus.textContent = "Downloading";
 
-    /* ✅ SET STATUS AWAL DOWNLOAD */
-    document.getElementById("info").textContent =
-      "⬇️ Download dimulai";
-    document.getElementById("seedStatus").textContent =
-      "⬇️ Downloading";
-    document.getElementById("uploaded").textContent = "0 B";
-    document.getElementById("upSpeed").textContent = "0 B/s";
-
-    log("⬇️ Download dimulai");
-
-    /* ✅ UPDATE STATUS SETIAP DATA MASUK */
-    torrent.on("download", ()=>{
-      const p = Math.round(torrent.progress * 100);
-
-      document.getElementById("info").textContent =
-        `⬇️ Download ${p}%`;
-
-      document.getElementById("peerCount").textContent =
-        torrent.numPeers;
-
-      document.getElementById("downloaded").textContent =
-        format(torrent.downloaded);
-
-      document.getElementById("downSpeed").textContent =
-        format(torrent.downloadSpeed) + "/s";
+    torrent.on("download",()=>{
+      downloaded.textContent = format(torrent.downloaded);
+      downSpeed.textContent = format(torrent.downloadSpeed)+"/s";
     });
 
-    /* ✅ SETELAH DOWNLOAD SELESAI */
-    torrent.on("done", ()=>{
-      log("✅ Download selesai");
-      log("💾 Menyimpan file...");
-
-      document.getElementById("info").textContent =
-        "💾 Menyimpan file ke browser...";
-
-      document.getElementById("seedStatus").textContent =
-        "AKTIF (Seeder)";
-      document.getElementById("fileCount").textContent =
-        torrent.files.length;
-
-      torrent.files.forEach(file=>{
-        file.getBlob((err, blob)=>{
-          if(err){
-            log("❌ Gagal simpan: " + file.name);
-            return;
-          }
-
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = file.name;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-
-          log("💾 File tersimpan: " + file.name);
-        });
-      });
-
-      /* ✅ BARU AKTIFKAN STAT SEEDER */
-      bindSeederStats(torrent);
+    torrent.on("done",()=>{
+      seedStatus.textContent = "Seeder";
+      torrent.files.forEach(f=>f.getBlob((_,b)=>{
+        const a=document.createElement("a");
+        a.href=URL.createObjectURL(b);
+        a.download=f.name;
+        a.click();
+      }));
     });
   });
 }
 
-
-/* ======================
-   SEEDER STATS
-====================== */
-function bindSeederStats(torrent){
-  torrent.on("wire", ()=>{
-    document.getElementById("peerCount").textContent =
-      torrent.numPeers;
-  });
-
-  torrent.on("upload", bytes=>{
-    uploadedBytes += bytes;
-    document.getElementById("uploaded").textContent =
-      format(uploadedBytes);
-    document.getElementById("upSpeed").textContent =
-      format(torrent.uploadSpeed)+"/s";
-  });
+function copyMagnet(){
+  navigator.clipboard.writeText(magnet.value);
+  log("📋 Magnet disalin");
 }
 
 /* ======================
-   TELEGRAM EMBED
+   TELEGRAM
 ====================== */
 function loadTelegramPreview(){
   const box = document.getElementById("telegram-preview");
-  box.innerHTML = "";
-
-  const s = document.createElement("script");
-  s.src = "https://telegram.org/js/telegram-widget.js?22";
-  s.async = true;
-  s.setAttribute(
-    "data-telegram-post",
-    `${CHANNEL_USERNAME}/${MESSAGE_ID}`
-  );
-  s.setAttribute("data-width", "100%");
-  s.setAttribute("data-userpic", "false");
-
+  box.innerHTML="";
+  const s=document.createElement("script");
+  s.src="https://telegram.org/js/telegram-widget.js?22";
+  s.async=true;
+  s.dataset.telegramPost=`${CHANNEL_USERNAME}/${MESSAGE_ID}`;
+  s.dataset.width="100%";
   box.appendChild(s);
 }
-
 loadTelegramPreview();
 
-/* ======================
-   EDIT PESAN TELEGRAM
-====================== */
 async function shareMagnet(){
-  const magnet = document.getElementById("magnet").value.trim();
-  if(!magnet) return;
+  const hash = extractHash(magnet.value);
+  if(!hash) return;
 
-  const hash = extractHash(magnet);
-
-  const text = `${hash}
-`;
-
-
-  document.getElementById("info").textContent =
-    "✏️ Mengedit pesan Telegram...";
-
-  try{
-    await fetch(
-      `https://api.telegram.org/bot${TOKEN}/editMessageText`,
-      {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body:JSON.stringify({
-          chat_id: CHAT_ID,
-          message_id: MESSAGE_ID,
-          text: text,
-          disable_web_page_preview: true
-        })
-      }
-    );
-
-    log("✏️ Pesan Telegram diperbarui");
-    document.getElementById("info").textContent =
-      "✅ Pesan Telegram diperbarui";
-
-    loadTelegramPreview();
-
-  }catch(err){
-    document.getElementById("info").textContent =
-      "❌ Error: " + err.message;
-  }
+  info.textContent = "✏️ Mengedit pesan Telegram...";
+  await fetch(`https://api.telegram.org/bot${TOKEN}/editMessageText`,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({
+      chat_id:CHAT_ID,
+      message_id:MESSAGE_ID,
+      text:hash,
+      disable_web_page_preview:true
+    })
+  });
+  info.textContent = "✅ Telegram diperbarui";
+  loadTelegramPreview();
 }
-	
 </script>
 
 </body>
