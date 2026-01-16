@@ -18,7 +18,7 @@ body {
 h1 { font-size: 1.4rem; }
 .card {
   background: #0f172a;
-  padding: 15px;
+  padding: 16px;
   border-radius: 12px;
   margin-top: 15px;
 }
@@ -27,14 +27,22 @@ h1 { font-size: 1.4rem; }
   background: #020617;
   border-radius: 6px;
   overflow: hidden;
+  margin-top: 8px;
 }
 .bar {
   height: 100%;
   width: 0%;
   background: #38bdf8;
+  transition: width 0.3s;
 }
-.small { font-size: 0.9rem; opacity: 0.8; }
-.file { margin-top: 10px; }
+.small {
+  font-size: 0.9rem;
+  opacity: 0.85;
+  margin-top: 6px;
+}
+.file {
+  margin-top: 10px;
+}
 </style>
 </head>
 
@@ -42,7 +50,8 @@ h1 { font-size: 1.4rem; }
 
 <h1>📄 Viewer Konten Terdistribusi</h1>
 <p class="small">
-Konten ini dimuat melalui jaringan P2P browser (WebTorrent).
+Konten ini dimuat menggunakan jaringan <b>P2P browser (WebTorrent)</b>.
+Jika ada helper aktif, unduhan akan lebih cepat.
 </p>
 
 <div id="content"></div>
@@ -56,27 +65,38 @@ const ANNOUNCE = [
   "wss://tracker.fastcast.nz"
 ];
 
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + " MB";
+  return (bytes / 1024 / 1024 / 1024).toFixed(2) + " GB";
+}
+
 const client = new WebTorrent();
 const container = document.getElementById("content");
 
 fetch(POPULAR_JSON_URL)
-.then(r => r.json())
+.then(res => res.json())
 .then(data => {
+
   if (!data.articles || !data.articles.length) {
     container.textContent = "Konten belum tersedia.";
     return;
   }
 
-  // Ambil 1 konten teratas (paling prioritas)
+  // Ambil konten prioritas teratas
   const article = data.articles[0];
 
   const card = document.createElement("div");
   card.className = "card";
   card.innerHTML = `
     <b>${article.title}</b>
-    <div class="small">Mengunduh via P2P…</div>
-    <div class="progress"><div class="bar"></div></div>
-    <div class="small" id="stat">0%</div>
+    <div class="small" id="stat">
+      0% • menunggu piece pertama (±16–64 KB)
+    </div>
+    <div class="progress">
+      <div class="bar"></div>
+    </div>
     <div class="file" id="file"></div>
   `;
   container.appendChild(card);
@@ -88,26 +108,39 @@ fetch(POPULAR_JSON_URL)
   client.add(article.magnet, { announce: ANNOUNCE }, torrent => {
 
     torrent.on("download", () => {
-      const p = Math.round(torrent.progress * 100);
-      bar.style.width = p + "%";
+      const percent = Math.floor(torrent.progress * 100);
+      bar.style.width = percent + "%";
+
       stat.textContent =
-        p + "% • " +
-        (torrent.downloadSpeed/1024).toFixed(1) + " KB/s • " +
+        percent + "% • " +
+        formatBytes(torrent.downloaded) + " / " +
+        formatBytes(torrent.length) +
+        " • " +
+        (torrent.downloadSpeed / 1024).toFixed(1) + " KB/s • " +
         torrent.numPeers + " peer";
     });
 
+    torrent.on("wire", () => {
+      if (torrent.downloaded === 0) {
+        stat.textContent =
+          "0% • peer terhubung, menunggu data (±16–64 KB)";
+      }
+    });
+
     torrent.on("done", () => {
-      stat.textContent = "Selesai • sekarang ikut seeding";
+      stat.textContent = "Selesai • ikut seeding ke user lain";
 
       torrent.files.forEach(file => {
         file.appendTo(fileBox);
       });
     });
+
   });
 
 })
-.catch(() => {
+.catch(err => {
   container.textContent = "Gagal memuat data.";
+  console.error(err);
 });
 </script>
 
