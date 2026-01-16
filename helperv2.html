@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Voluntary P2P Helper</title>
+<title>Voluntary P2P Helper — MAX SEED MODE</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
 
@@ -45,16 +45,8 @@ button.off {
   margin-top: 15px;
 }
 .small { font-size: 0.9rem; opacity: 0.8; }
-.magnet-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 6px 0;
-  word-break: break-all;
-}
-.magnet-item input {
-  width: auto;
-}
+.list { margin-top: 10px; }
+.list div { margin-bottom: 6px; }
 </style>
 </head>
 
@@ -62,184 +54,202 @@ button.off {
 
 <h1>🧠 Voluntary P2P Helper</h1>
 <p class="small">
-Pilih konten mana saja yang ingin Anda bantu distribusinya.
+Mode MAX SEED aktif: browser Anda berperan sebagai seeder sukarela.
 </p>
 
 <button id="toggle">Aktifkan Bantuan</button>
 
 <div class="card">
   <div>Status: <b id="status">Menunggu</b></div>
-  <div>Upload: <b id="uploaded">0 KB</b></div>
+  <div>Data terkirim: <b id="uploaded">0 KB</b></div>
   <div>Peer aktif: <b id="peers">0</b></div>
+  <div>Potensi hemat server: <b id="saving">0 GB / hari</b></div>
 </div>
 
 <div class="card">
-  <b>Magnet Tersimpan (Checklist)</b>
-  <div id="magnetList" class="small">Belum ada magnet</div>
+  <b>Konten prioritas (otomatis)</b>
+  <div id="list" class="list small">Memuat data…</div>
 </div>
 
 <div class="card">
-  <b>Tambah Magnet / Hash</b>
+  <b>Tambah Magnet / Hash Manual</b>
   <input id="manualMagnet"
     placeholder="magnet:?xt=urn:btih:xxxx atau hash 40 karakter">
-  <button id="addMagnet">Simpan Magnet</button>
+  <button id="addMagnet">Tambah ke Helper</button>
   <div id="manualStatus" class="small"></div>
 </div>
 
 <script>
+const POPULAR_JSON_URL = "./popular.json";
 const STORAGE_KEY = "p2p_helper_active";
-const MAGNET_KEY = "p2p_magnet_map";
+const MANUAL_KEY = "p2p_manual_magnets";
 
+/* TRACKER DIPERBANYAK = MAX CONNECT */
 const ANNOUNCE = [
   "wss://tracker.openwebtorrent.com",
   "wss://tracker.btorrent.xyz",
-  "wss://tracker.fastcast.nz"
+  "wss://tracker.fastcast.nz",
+  "wss://tracker.webtorrent.dev",
+  "wss://tracker.files.fm:7073/announce"
 ];
 
 let client;
 let totalUploaded = 0;
 let totalPeers = 0;
-let torrents = {};
+let activeMagnets = new Set();
 
 const statusEl = document.getElementById("status");
 const uploadedEl = document.getElementById("uploaded");
 const peersEl = document.getElementById("peers");
+const savingEl = document.getElementById("saving");
+const listEl = document.getElementById("list");
 const btn = document.getElementById("toggle");
-const magnetListEl = document.getElementById("magnetList");
 const manualInput = document.getElementById("manualMagnet");
 const manualStatus = document.getElementById("manualStatus");
 
-function formatBytes(b) {
-  if (b < 1024) return b + " B";
-  if (b < 1024*1024) return (b/1024).toFixed(1) + " KB";
-  return (b/1024/1024).toFixed(1) + " MB";
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + " KB";
+  if (bytes < 1024*1024*1024) return (bytes/1024/1024).toFixed(1) + " MB";
+  return (bytes/1024/1024/1024).toFixed(2) + " GB";
 }
 
-function normalizeMagnet(v) {
-  v = v.trim();
-  if (v.startsWith("magnet:?xt=urn:btih:")) return v;
-  if (/^[a-fA-F0-9]{40}$/.test(v)) {
-    return "magnet:?xt=urn:btih:" + v;
+function normalizeMagnet(input) {
+  input = input.trim();
+  if (input.startsWith("magnet:?xt=urn:btih:")) return input;
+  if (/^[a-fA-F0-9]{40}$/.test(input)) {
+    return "magnet:?xt=urn:btih:" + input;
   }
   return null;
 }
 
-function loadMagnetMap() {
-  return JSON.parse(localStorage.getItem(MAGNET_KEY) || "{}");
-}
+/* 🔥 MAX SEED ATTACH */
+function attachTorrent(torrent, magnet) {
 
-function saveMagnetMap(map) {
-  localStorage.setItem(MAGNET_KEY, JSON.stringify(map));
-}
+  torrent.on("wire", wire => {
+    totalPeers++;
+    peersEl.textContent = totalPeers;
+    statusEl.textContent = "Aktif sebagai SEEDER";
 
-function renderMagnetList() {
-  const map = loadMagnetMap();
-  magnetListEl.innerHTML = "";
+    // PRIORITASKAN UPLOAD
+    if (wire.upload) {
+      wire.upload();
+    }
+  });
 
-  const keys = Object.keys(map);
-  if (!keys.length) {
-    magnetListEl.textContent = "Belum ada magnet tersimpan";
-    return;
-  }
+  torrent.on("upload", bytes => {
+    totalUploaded += bytes;
+    uploadedEl.textContent = formatBytes(totalUploaded);
+  });
 
-  keys.forEach(magnet => {
-    const row = document.createElement("div");
-    row.className = "magnet-item";
-
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.checked = map[magnet];
-
-    cb.onchange = () => {
-      map[magnet] = cb.checked;
-      saveMagnetMap(map);
-      cb.checked ? seedMagnet(magnet) : unseedMagnet(magnet);
-    };
-
-    const label = document.createElement("span");
-    label.textContent = magnet.replace("magnet:?xt=urn:btih:", "");
-
-    row.append(cb, label);
-    magnetListEl.appendChild(row);
+  // AUTO RECOVER JIKA TORRENT ERROR
+  torrent.on("error", () => {
+    setTimeout(() => {
+      if (client && !client.get(magnet)) {
+        client.add(magnet, { announce: ANNOUNCE }, t => attachTorrent(t, magnet));
+      }
+    }, 3000);
   });
 }
 
-function seedMagnet(magnet) {
-  if (!client || torrents[magnet]) return;
-
-  client.add(magnet, { announce: ANNOUNCE }, torrent => {
-    torrents[magnet] = torrent;
-
-    torrent.on("wire", () => {
-      totalPeers++;
-      peersEl.textContent = totalPeers;
-      statusEl.textContent = "Aktif membantu";
-    });
-
-    torrent.on("upload", b => {
-      totalUploaded += b;
-      uploadedEl.textContent = formatBytes(totalUploaded);
-    });
-  });
-}
-
-function unseedMagnet(magnet) {
-  if (torrents[magnet]) {
-    torrents[magnet].destroy();
-    delete torrents[magnet];
+function saveManual(magnet) {
+  const data = JSON.parse(localStorage.getItem(MANUAL_KEY) || "[]");
+  if (!data.includes(magnet)) {
+    data.push(magnet);
+    localStorage.setItem(MANUAL_KEY, JSON.stringify(data));
   }
 }
 
-function startHelper() {
-  client = new WebTorrent();
-  statusEl.textContent = "Aktif";
-  btn.textContent = "Matikan Bantuan";
-  btn.classList.add("off");
-
-  const map = loadMagnetMap();
-  Object.entries(map).forEach(([m, enabled]) => {
-    if (enabled) seedMagnet(m);
-  });
+function loadManual() {
+  return JSON.parse(localStorage.getItem(MANUAL_KEY) || "[]");
 }
 
 function stopHelper() {
+  localStorage.removeItem(STORAGE_KEY);
   if (client) client.destroy();
-  torrents = {};
+  activeMagnets.clear();
   btn.textContent = "Aktifkan Bantuan";
   btn.classList.remove("off");
   statusEl.textContent = "Nonaktif";
 }
 
+async function startHelper() {
+  btn.textContent = "Matikan Bantuan";
+  btn.classList.add("off");
+  statusEl.textContent = "Menghubungkan peer…";
+
+  localStorage.setItem(STORAGE_KEY, "1");
+  client = new WebTorrent({ maxConns: 100 });
+
+  // --- AUTO CONTENT ---
+  try {
+    const res = await fetch(POPULAR_JSON_URL);
+    const data = await res.json();
+
+    if (data.articles?.length) {
+      let saving = 0;
+      listEl.innerHTML = "";
+
+      data.articles.forEach(a => {
+        saving += (a.sizeMB * a.dailyViews) / 1024;
+        listEl.innerHTML += `<div>• ${a.title}</div>`;
+
+        activeMagnets.add(a.magnet);
+        client.add(a.magnet, { announce: ANNOUNCE }, t => attachTorrent(t, a.magnet));
+      });
+
+      savingEl.textContent = saving.toFixed(1) + " GB / hari";
+    } else {
+      listEl.textContent = "Belum ada data populer";
+    }
+  } catch {
+    listEl.textContent = "Gagal memuat data populer";
+  }
+
+  // --- RESTORE MANUAL ---
+  loadManual().forEach(m => {
+    if (!activeMagnets.has(m)) {
+      activeMagnets.add(m);
+      client.add(m, { announce: ANNOUNCE }, t => attachTorrent(t, m));
+    }
+  });
+}
+
 btn.onclick = () => {
-  localStorage.getItem(STORAGE_KEY)
-    ? (localStorage.removeItem(STORAGE_KEY), stopHelper())
-    : (localStorage.setItem(STORAGE_KEY, "1"), startHelper());
+  localStorage.getItem(STORAGE_KEY) ? stopHelper() : startHelper();
 };
 
 document.getElementById("addMagnet").onclick = () => {
+  if (!client) {
+    manualStatus.textContent = "Aktifkan helper terlebih dahulu.";
+    return;
+  }
+
   const magnet = normalizeMagnet(manualInput.value);
   if (!magnet) {
-    manualStatus.textContent = "Format magnet / hash tidak valid.";
+    manualStatus.textContent = "Input tidak valid.";
     return;
   }
 
-  const map = loadMagnetMap();
-  if (magnet in map) {
-    manualStatus.textContent = "Magnet sudah tersimpan.";
+  if (activeMagnets.has(magnet)) {
+    manualStatus.textContent = "Torrent sudah aktif.";
     return;
   }
 
-  map[magnet] = true;
-  saveMagnetMap(map);
-  renderMagnetList();
-  if (client) seedMagnet(magnet);
+  activeMagnets.add(magnet);
+  saveManual(magnet);
 
-  manualInput.value = "";
-  manualStatus.textContent = "Magnet disimpan & diaktifkan.";
+  client.add(magnet, { announce: ANNOUNCE }, t => {
+    attachTorrent(t, magnet);
+    manualStatus.textContent = "Magnet ditambahkan & disimpan.";
+    manualInput.value = "";
+  });
 };
 
-renderMagnetList();
-if (localStorage.getItem(STORAGE_KEY)) startHelper();
+// AUTO START
+if (localStorage.getItem(STORAGE_KEY)) {
+  startHelper();
+}
 </script>
 
 </body>
