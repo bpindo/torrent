@@ -1,0 +1,23 @@
+{
+  "updated": "2026-01-16",
+  "articles": [
+    {
+      "title": "Big Buck Bunny (Video Demo WebTorrent)",
+      "magnet": "magnet:?xt=urn:btih:dd8255ecdc7ca55fb0bbf81323d87062db1f6d1c&dn=Big+Buck+Bunny&tr=wss://tracker.openwebtorrent.com",
+      "sizeMB": 95.0,
+      "dailyViews": 4200
+    },
+    {
+      "title": "Sintel Movie (Open Movie Project)",
+      "magnet": "magnet:?xt=urn:btih:08ada5a7a6183aae1e09d831df6748d566095a10&dn=Sintel&tr=wss://tracker.openwebtorrent.com",
+      "sizeMB": 125.0,
+      "dailyViews": 3100
+    },
+    {
+      "title": "Ubuntu Linux ISO (Popular Open Source)",
+      "magnet": "magnet:?xt=urn:btih:5e6c0f4b2b6f6e9d6e0b9a8e7b2d7e2c0a1f5b9c&dn=ubuntu.iso&tr=wss://tracker.openwebtorrent.com",
+      "sizeMB": 3500.0,
+      "dailyViews": 980
+    }
+  ]
+}
