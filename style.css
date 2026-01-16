@@ -1,0 +1,112 @@
+/* ===== BASE ===== */
+body{
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  padding:14px;
+  max-width:720px;
+  margin:auto;
+  background:#fafafa;
+  color:#333;
+}
+h2{font-size:1.4em;margin-bottom:12px}
+
+input,button,textarea{
+  width:100%;
+  padding:14px;
+  margin:8px 0;
+  font-size:1em;
+  border-radius:10px;
+  box-sizing:border-box;
+}
+input,textarea{border:1px solid #ccc;resize:vertical}
+button{
+  border:none;
+  cursor:pointer;
+  font-weight:600;
+  user-select:none;
+}
+button:disabled{background:#aaa;cursor:not-allowed}
+
+/* ===== BUTTON COLORS ===== */
+.btn-seed{background:#4caf50;color:#fff}
+.btn-copy{background:#2196f3;color:#fff}
+.btn-edit{background:#9c27b0;color:#fff}
+.btn-download{background:#ff9800;color:#fff}
+
+/* ===== LAYOUT ===== */
+.input-row{
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+#fileInput{display:none}
+.file-btn{
+  padding:10px 14px;
+  border-radius:10px;
+  background:#e0e0e0;
+  cursor:pointer;
+  font-weight:600;
+  white-space:nowrap;
+}
+#magnet{flex:1;min-width:0}
+
+.btn-row{
+  display:flex;
+  gap:10px;
+}
+.btn-row button{
+  flex:1;
+  width:auto;
+  margin:8px 0;
+}
+
+/* ===== STATUS / LOG ===== */
+.status{
+  background:#e3f2fd;
+  padding:12px;
+  border-radius:10px;
+  margin-top:10px;
+  font-size:.95em;
+}
+
+pre{
+  background:#111;
+  color:#0f0;
+  padding:10px;
+  border-radius:10px;
+  height:200px;
+  overflow:auto;
+  font-size:12px;
+  margin-top:12px;
+}
+
+.log-card{
+  margin-top:12px;
+  padding:10px 12px;
+  border:1px solid rgba(0,0,0,.12);
+  border-radius:8px;
+  background:#fff;
+  font-size:.85em;
+  line-height:1.45;
+  max-height:260px;
+  overflow-y:auto;
+}
+.log-item{
+  padding:6px 0;
+  border-bottom:1px dashed rgba(0,0,0,.08);
+}
+.log-item:last-child{border-bottom:none}
+.log-time{font-size:.75em;color:#888}
+
+/* ===== UTIL ===== */
+.hidden{display:none!important}
+
+/* ===== MOBILE ===== */
+@media(max-width:520px){
+  body{padding:10px;max-width:100%}
+  .input-row{flex-direction:column;align-items:stretch}
+  .file-btn{text-align:center;padding:12px}
+  input,textarea,button{padding:12px}
+  .btn-row{flex-direction:column}
+  .btn-row button{margin:6px 0}
+  pre{height:120px;font-size:10px}
+}
