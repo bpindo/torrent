@@ -16,13 +16,22 @@ body {
   padding: 20px;
 }
 h1 { font-size: 1.4rem; }
+input, button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 8px;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+input {
+  border: 1px solid #334155;
+  background: #020617;
+  color: #e5e7eb;
+}
 button {
   background: #22c55e;
   color: #052e16;
   border: none;
-  padding: 12px 18px;
-  border-radius: 8px;
-  font-size: 1rem;
   cursor: pointer;
 }
 button.off {
@@ -45,8 +54,8 @@ button.off {
 
 <h1>🧠 Voluntary P2P Helper</h1>
 <p class="small">
-Dengan mengaktifkan, browser Anda membantu distribusi konten populer
-secara aman & terbatas.
+Browser Anda membantu distribusi konten secara P2P
+tanpa membebani server.
 </p>
 
 <button id="toggle">Aktifkan Bantuan</button>
@@ -59,13 +68,22 @@ secara aman & terbatas.
 </div>
 
 <div class="card">
-  <b>Konten prioritas:</b>
+  <b>Konten prioritas (otomatis)</b>
   <div id="list" class="list small">Memuat data…</div>
+</div>
+
+<div class="card">
+  <b>Tambah Magnet / Hash Manual</b>
+  <input id="manualMagnet"
+    placeholder="magnet:?xt=urn:btih:xxxx atau hash 40 karakter">
+  <button id="addMagnet">Tambah ke Helper</button>
+  <div id="manualStatus" class="small"></div>
 </div>
 
 <script>
 const POPULAR_JSON_URL = "./popular.json";
 const STORAGE_KEY = "p2p_helper_active";
+const MANUAL_KEY = "p2p_manual_magnets";
 
 const ANNOUNCE = [
   "wss://tracker.openwebtorrent.com",
@@ -76,6 +94,7 @@ const ANNOUNCE = [
 let client;
 let totalUploaded = 0;
 let totalPeers = 0;
+let activeMagnets = new Set();
 
 const statusEl = document.getElementById("status");
 const uploadedEl = document.getElementById("uploaded");
@@ -83,6 +102,8 @@ const peersEl = document.getElementById("peers");
 const savingEl = document.getElementById("saving");
 const listEl = document.getElementById("list");
 const btn = document.getElementById("toggle");
+const manualInput = document.getElementById("manualMagnet");
+const manualStatus = document.getElementById("manualStatus");
 
 function formatBytes(bytes) {
   if (bytes < 1024) return bytes + " B";
@@ -91,9 +112,44 @@ function formatBytes(bytes) {
   return (bytes/1024/1024/1024).toFixed(2) + " GB";
 }
 
+function normalizeMagnet(input) {
+  input = input.trim();
+  if (input.startsWith("magnet:?xt=urn:btih:")) return input;
+  if (/^[a-fA-F0-9]{40}$/.test(input)) {
+    return "magnet:?xt=urn:btih:" + input;
+  }
+  return null;
+}
+
+function attachTorrent(torrent) {
+  torrent.on("wire", () => {
+    totalPeers++;
+    peersEl.textContent = totalPeers;
+    statusEl.textContent = "Aktif membantu";
+  });
+
+  torrent.on("upload", bytes => {
+    totalUploaded += bytes;
+    uploadedEl.textContent = formatBytes(totalUploaded);
+  });
+}
+
+function saveManual(magnet) {
+  const data = JSON.parse(localStorage.getItem(MANUAL_KEY) || "[]");
+  if (!data.includes(magnet)) {
+    data.push(magnet);
+    localStorage.setItem(MANUAL_KEY, JSON.stringify(data));
+  }
+}
+
+function loadManual() {
+  return JSON.parse(localStorage.getItem(MANUAL_KEY) || "[]");
+}
+
 function stopHelper() {
   localStorage.removeItem(STORAGE_KEY);
   if (client) client.destroy();
+  activeMagnets.clear();
   btn.textContent = "Aktifkan Bantuan";
   btn.classList.remove("off");
   statusEl.textContent = "Nonaktif";
@@ -107,62 +163,72 @@ async function startHelper() {
   localStorage.setItem(STORAGE_KEY, "1");
   client = new WebTorrent();
 
-  let res;
+  // --- konten otomatis ---
   try {
-    res = await fetch(POPULAR_JSON_URL);
+    const res = await fetch(POPULAR_JSON_URL);
+    const data = await res.json();
+
+    if (data.articles?.length) {
+      let saving = 0;
+      data.articles.forEach(a => {
+        saving += (a.sizeMB * a.dailyViews) / 1024;
+      });
+      savingEl.textContent = saving.toFixed(1) + " GB / hari";
+
+      listEl.innerHTML = "";
+      data.articles.forEach(a => {
+        listEl.innerHTML += `<div>• ${a.title}</div>`;
+        activeMagnets.add(a.magnet);
+        client.add(a.magnet, { announce: ANNOUNCE }, attachTorrent);
+      });
+    } else {
+      listEl.textContent = "Belum ada data populer";
+    }
   } catch {
-    statusEl.textContent = "Gagal memuat data";
-    return;
+    listEl.textContent = "Gagal memuat data populer";
   }
 
-  const data = await res.json();
-  if (!data.articles || !data.articles.length) {
-    listEl.textContent = "Data populer belum ada";
-    return;
-  }
-
-  // hitung potensi hemat
-  let saving = 0;
-  data.articles.forEach(a => {
-    saving += (a.sizeMB * a.dailyViews) / 1024;
-  });
-  savingEl.textContent = saving.toFixed(1) + " GB / hari";
-
-  // urutkan paling berat
-  data.articles.sort((a,b) =>
-    (b.sizeMB*b.dailyViews)-(a.sizeMB*a.dailyViews)
-  );
-
-  listEl.innerHTML = "";
-  data.articles.forEach(a => {
-    const d = document.createElement("div");
-    d.textContent = "• " + a.title;
-    listEl.appendChild(d);
-
-    client.add(a.magnet, { announce: ANNOUNCE }, torrent => {
-      torrent.on("wire", () => {
-        totalPeers++;
-        peersEl.textContent = totalPeers;
-        statusEl.textContent = "Aktif membantu";
-      });
-
-      torrent.on("upload", bytes => {
-        totalUploaded += bytes;
-        uploadedEl.textContent = formatBytes(totalUploaded);
-      });
-    });
+  // --- restore magnet manual ---
+  loadManual().forEach(m => {
+    if (!activeMagnets.has(m)) {
+      activeMagnets.add(m);
+      client.add(m, { announce: ANNOUNCE }, attachTorrent);
+    }
   });
 }
 
 btn.onclick = () => {
-  if (localStorage.getItem(STORAGE_KEY)) {
-    stopHelper();
-  } else {
-    startHelper();
-  }
+  localStorage.getItem(STORAGE_KEY) ? stopHelper() : startHelper();
 };
 
-// AUTO START jika pernah aktif
+document.getElementById("addMagnet").onclick = () => {
+  if (!client) {
+    manualStatus.textContent = "Aktifkan helper terlebih dahulu.";
+    return;
+  }
+
+  const magnet = normalizeMagnet(manualInput.value);
+  if (!magnet) {
+    manualStatus.textContent = "Masukkan magnet atau hash BTIH (40 karakter).";
+    return;
+  }
+
+  if (activeMagnets.has(magnet)) {
+    manualStatus.textContent = "Torrent ini sudah aktif.";
+    return;
+  }
+
+  activeMagnets.add(magnet);
+  saveManual(magnet);
+
+  client.add(magnet, { announce: ANNOUNCE }, torrent => {
+    attachTorrent(torrent);
+    manualStatus.textContent = "Magnet berhasil ditambahkan & disimpan.";
+    manualInput.value = "";
+  });
+};
+
+// AUTO START
 if (localStorage.getItem(STORAGE_KEY)) {
   startHelper();
 }
