@@ -2,14 +2,14 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Voluntary P2P Helper – MAX SEED MODE</title>
+<title>Voluntary P2P Helper</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
 
 <style>
 body {
   font-family: system-ui, sans-serif;
-  background: #020617;
+  background: #0f172a;
   color: #e5e7eb;
   max-width: 720px;
   margin: auto;
@@ -24,8 +24,8 @@ input, button {
   font-size: 1rem;
 }
 input {
-  background: #020617;
   border: 1px solid #334155;
+  background: #020617;
   color: #e5e7eb;
 }
 button {
@@ -33,7 +33,6 @@ button {
   color: #052e16;
   border: none;
   cursor: pointer;
-  font-weight: 600;
 }
 button.off {
   background: #ef4444;
@@ -41,13 +40,21 @@ button.off {
 }
 .card {
   background: #020617;
-  border: 1px solid #1e293b;
   padding: 16px;
   border-radius: 12px;
-  margin-top: 14px;
+  margin-top: 15px;
 }
-.small { font-size: 0.9rem; opacity: 0.85; }
-.list div { margin-bottom: 6px; }
+.small { font-size: 0.9rem; opacity: 0.8; }
+.magnet-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+  word-break: break-all;
+}
+.magnet-item input {
+  width: auto;
+}
 </style>
 </head>
 
@@ -55,68 +62,57 @@ button.off {
 
 <h1>🧠 Voluntary P2P Helper</h1>
 <p class="small">
-MAX SEED MODE — browser Anda berfungsi sebagai seeder WebRTC agresif.
+Pilih konten mana saja yang ingin Anda bantu distribusinya.
 </p>
 
-<button id="toggle">Aktifkan MAX SEED</button>
+<button id="toggle">Aktifkan Bantuan</button>
 
 <div class="card">
-  <div>Status: <b id="status">Idle</b></div>
+  <div>Status: <b id="status">Menunggu</b></div>
   <div>Upload: <b id="uploaded">0 KB</b></div>
   <div>Peer aktif: <b id="peers">0</b></div>
 </div>
 
 <div class="card">
-  <b>Seeder Otomatis</b>
-  <div id="list" class="small">Menunggu data…</div>
+  <b>Magnet Tersimpan (Checklist)</b>
+  <div id="magnetList" class="small">Belum ada magnet</div>
 </div>
 
 <div class="card">
-  <b>Tambah Magnet / Hash Manual</b>
-  <input id="manualMagnet" placeholder="magnet:?xt=urn:btih:xxxx atau hash BTIH">
-  <button id="addMagnet">Tambah & Seed</button>
+  <b>Tambah Magnet / Hash</b>
+  <input id="manualMagnet"
+    placeholder="magnet:?xt=urn:btih:xxxx atau hash 40 karakter">
+  <button id="addMagnet">Simpan Magnet</button>
   <div id="manualStatus" class="small"></div>
 </div>
 
 <script>
-/* ================= CONFIG ================= */
-
-const POPULAR_JSON_URL = "./popular.json";
 const STORAGE_KEY = "p2p_helper_active";
-const MANUAL_KEY = "p2p_manual_magnets";
+const MAGNET_KEY = "p2p_magnet_map";
 
 const ANNOUNCE = [
   "wss://tracker.openwebtorrent.com",
   "wss://tracker.btorrent.xyz",
-  "wss://tracker.fastcast.nz",
-  "wss://tracker.webtorrent.dev",
-  "wss://tracker.files.fm:7073/announce"
+  "wss://tracker.fastcast.nz"
 ];
-
-/* ================= STATE ================= */
 
 let client;
 let totalUploaded = 0;
 let totalPeers = 0;
-let activeMagnets = new Set();
-
-/* ================= UI ================= */
+let torrents = {};
 
 const statusEl = document.getElementById("status");
 const uploadedEl = document.getElementById("uploaded");
 const peersEl = document.getElementById("peers");
-const listEl = document.getElementById("list");
 const btn = document.getElementById("toggle");
+const magnetListEl = document.getElementById("magnetList");
 const manualInput = document.getElementById("manualMagnet");
 const manualStatus = document.getElementById("manualStatus");
-
-/* ================= UTILS ================= */
 
 function formatBytes(b) {
   if (b < 1024) return b + " B";
   if (b < 1024*1024) return (b/1024).toFixed(1) + " KB";
-  if (b < 1024*1024*1024) return (b/1024/1024).toFixed(1) + " MB";
-  return (b/1024/1024/1024).toFixed(2) + " GB";
+  return (b/1024/1024).toFixed(1) + " MB";
 }
 
 function normalizeMagnet(v) {
@@ -128,122 +124,121 @@ function normalizeMagnet(v) {
   return null;
 }
 
-/* ================= SEED CORE ================= */
-
-function maxSeed(torrent) {
-  torrent.files.forEach(f => f.select());
-  torrent.critical(0, torrent.pieces.length - 1);
-
-  torrent.on("wire", () => {
-    totalPeers++;
-    peersEl.textContent = totalPeers;
-    statusEl.textContent = "Seeding aktif";
-  });
-
-  torrent.on("upload", b => {
-    totalUploaded += b;
-    uploadedEl.textContent = formatBytes(totalUploaded);
-  });
-
-  torrent.on("done", () => torrent.resume());
-  torrent.on("noPeers", () => torrent.resume());
+function loadMagnetMap() {
+  return JSON.parse(localStorage.getItem(MAGNET_KEY) || "{}");
 }
 
-/* ================= STORAGE ================= */
+function saveMagnetMap(map) {
+  localStorage.setItem(MAGNET_KEY, JSON.stringify(map));
+}
 
-function saveManual(m) {
-  const arr = JSON.parse(localStorage.getItem(MANUAL_KEY) || "[]");
-  if (!arr.includes(m)) {
-    arr.push(m);
-    localStorage.setItem(MANUAL_KEY, JSON.stringify(arr));
+function renderMagnetList() {
+  const map = loadMagnetMap();
+  magnetListEl.innerHTML = "";
+
+  const keys = Object.keys(map);
+  if (!keys.length) {
+    magnetListEl.textContent = "Belum ada magnet tersimpan";
+    return;
   }
-}
 
-function loadManual() {
-  return JSON.parse(localStorage.getItem(MANUAL_KEY) || "[]");
-}
+  keys.forEach(magnet => {
+    const row = document.createElement("div");
+    row.className = "magnet-item";
 
-/* ================= MAIN ================= */
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = map[magnet];
 
-async function startHelper() {
-  btn.textContent = "Matikan MAX SEED";
-  btn.classList.add("off");
-  statusEl.textContent = "Inisialisasi…";
+    cb.onchange = () => {
+      map[magnet] = cb.checked;
+      saveMagnetMap(map);
+      cb.checked ? seedMagnet(magnet) : unseedMagnet(magnet);
+    };
 
-  localStorage.setItem(STORAGE_KEY, "1");
+    const label = document.createElement("span");
+    label.textContent = magnet.replace("magnet:?xt=urn:btih:", "");
 
-  client = new WebTorrent({
-    uploadLimit: 0,
-    downloadLimit: 0
+    row.append(cb, label);
+    magnetListEl.appendChild(row);
   });
+}
 
-  // otomatis
-  try {
-    const res = await fetch(POPULAR_JSON_URL);
-    const data = await res.json();
-    listEl.innerHTML = "";
+function seedMagnet(magnet) {
+  if (!client || torrents[magnet]) return;
 
-    data.articles?.forEach(a => {
-      listEl.innerHTML += `<div>• ${a.title}</div>`;
-      if (!activeMagnets.has(a.magnet)) {
-        activeMagnets.add(a.magnet);
-        client.add(a.magnet, { announce: ANNOUNCE, store: false }, maxSeed);
-      }
+  client.add(magnet, { announce: ANNOUNCE }, torrent => {
+    torrents[magnet] = torrent;
+
+    torrent.on("wire", () => {
+      totalPeers++;
+      peersEl.textContent = totalPeers;
+      statusEl.textContent = "Aktif membantu";
     });
-  } catch {
-    listEl.textContent = "Gagal memuat data otomatis";
-  }
 
-  // manual restore
-  loadManual().forEach(m => {
-    if (!activeMagnets.has(m)) {
-      activeMagnets.add(m);
-      client.add(m, { announce: ANNOUNCE, store: false }, maxSeed);
-    }
+    torrent.on("upload", b => {
+      totalUploaded += b;
+      uploadedEl.textContent = formatBytes(totalUploaded);
+    });
+  });
+}
+
+function unseedMagnet(magnet) {
+  if (torrents[magnet]) {
+    torrents[magnet].destroy();
+    delete torrents[magnet];
+  }
+}
+
+function startHelper() {
+  client = new WebTorrent();
+  statusEl.textContent = "Aktif";
+  btn.textContent = "Matikan Bantuan";
+  btn.classList.add("off");
+
+  const map = loadMagnetMap();
+  Object.entries(map).forEach(([m, enabled]) => {
+    if (enabled) seedMagnet(m);
   });
 }
 
 function stopHelper() {
-  localStorage.removeItem(STORAGE_KEY);
   if (client) client.destroy();
-  activeMagnets.clear();
-  btn.textContent = "Aktifkan MAX SEED";
+  torrents = {};
+  btn.textContent = "Aktifkan Bantuan";
   btn.classList.remove("off");
   statusEl.textContent = "Nonaktif";
 }
 
-/* ================= EVENTS ================= */
-
 btn.onclick = () => {
-  localStorage.getItem(STORAGE_KEY) ? stopHelper() : startHelper();
+  localStorage.getItem(STORAGE_KEY)
+    ? (localStorage.removeItem(STORAGE_KEY), stopHelper())
+    : (localStorage.setItem(STORAGE_KEY, "1"), startHelper());
 };
 
 document.getElementById("addMagnet").onclick = () => {
-  if (!client) {
-    manualStatus.textContent = "Aktifkan helper dulu.";
-    return;
-  }
-
   const magnet = normalizeMagnet(manualInput.value);
   if (!magnet) {
     manualStatus.textContent = "Format magnet / hash tidak valid.";
     return;
   }
 
-  if (activeMagnets.has(magnet)) {
-    manualStatus.textContent = "Torrent sudah diseding.";
+  const map = loadMagnetMap();
+  if (magnet in map) {
+    manualStatus.textContent = "Magnet sudah tersimpan.";
     return;
   }
 
-  activeMagnets.add(magnet);
-  saveManual(magnet);
+  map[magnet] = true;
+  saveMagnetMap(map);
+  renderMagnetList();
+  if (client) seedMagnet(magnet);
 
-  client.add(magnet, { announce: ANNOUNCE, store: false }, maxSeed);
-  manualStatus.textContent = "Seeder aktif & disimpan.";
   manualInput.value = "";
+  manualStatus.textContent = "Magnet disimpan & diaktifkan.";
 };
 
-// auto start
+renderMagnetList();
 if (localStorage.getItem(STORAGE_KEY)) startHelper();
 </script>
 
