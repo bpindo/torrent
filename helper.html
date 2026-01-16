@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Bantu Website Tetap Gratis</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+
+<style>
+body {
+  font-family: system-ui, Arial, sans-serif;
+  max-width: 560px;
+  margin: auto;
+  padding: 20px;
+  line-height: 1.6;
+  background: #ffffff;
+  color: #111;
+}
+h1 { font-size: 22px; }
+button {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  margin-top: 12px;
+  cursor: pointer;
+}
+.box {
+  background: #f4f4f4;
+  padding: 12px;
+  margin-top: 15px;
+  border-radius: 6px;
+}
+.small {
+  font-size: 13px;
+  color: #555;
+}
+ul {
+  padding-left: 18px;
+}
+.good { color: green; }
+.bad { color: #a00; }
+</style>
+</head>
+
+<body>
+
+<h1>🤝 Bantu Website Tetap Gratis</h1>
+
+<p>
+Dengan mengaktifkan halaman ini, browser Anda akan membantu
+<strong>mengirimkan artikel & gambar publik</strong>
+kepada pengunjung lain.
+</p>
+
+<p>
+✔️ Aman & anonim<br>
+✔️ Tanpa login<br>
+✔️ Bisa dihentikan kapan saja
+</p>
+
+<button id="toggle">Aktifkan Bantuan</button>
+
+<div class="box">
+  <div><strong>Status:</strong> <span id="state">Tidak aktif</span></div>
+  <div><strong>Data terkirim:</strong> <span id="sent">0</span> KB</div>
+  <div><strong>Potensi hemat server:</strong> <span id="saving">0</span> GB / hari</div>
+</div>
+
+<div class="box small">
+<strong>Konten yang diprioritaskan:</strong>
+<ul id="list"></ul>
+</div>
+
+<div class="small">
+<strong>Yang TIDAK kami lakukan:</strong><br>
+<span class="bad">❌ Tidak mengambil data pribadi</span><br>
+<span class="bad">❌ Tidak membaca aktivitas browsing</span><br>
+<span class="bad">❌ Tidak mining / CPU berat</span>
+</div>
+
+<script>
+/* ==============================
+   KONFIGURASI
+================================ */
+const POPULAR_JSON_URL = "/popular.json";
+const MAX_ARTICLE_HELP = 10;
+const UPLOAD_LIMIT = 600 * 1024; // 600 KB/s
+
+/* ==============================
+   STATE
+================================ */
+let client = null;
+let active = false;
+let uploaded = 0;
+
+/* ==============================
+   ELEMENT
+================================ */
+const btn = document.getElementById("toggle");
+const stateEl = document.getElementById("state");
+const sentEl = document.getElementById("sent");
+const savingEl = document.getElementById("saving");
+const listEl = document.getElementById("list");
+
+/* ==============================
+   TOGGLE HELPER
+================================ */
+btn.onclick = async () => {
+  if (!active) {
+    active = true;
+    btn.textContent = "Hentikan Bantuan";
+    stateEl.textContent = "Mengambil data…";
+
+    client = new WebTorrent({ uploadLimit: UPLOAD_LIMIT });
+
+    try {
+      const res = await fetch(POPULAR_JSON_URL);
+      const data = await res.json();
+
+      // Hitung skor penghematan
+      const ranked = data.articles.map(a => ({
+        ...a,
+        savingScore: a.sizeMB * a.dailyViews
+      }))
+      .sort((a, b) => b.savingScore - a.savingScore)
+      .slice(0, MAX_ARTICLE_HELP);
+
+      // Hitung potensi hemat total
+      const totalSavingMB = ranked.reduce(
+        (sum, a) => sum + a.savingScore, 0
+      );
+
+      savingEl.textContent = (totalSavingMB / 1024).toFixed(1);
+
+      // Tampilkan daftar artikel
+      listEl.innerHTML = "";
+      ranked.forEach(a => {
+        const li = document.createElement("li");
+        li.textContent =
+          `${a.title} (±${(a.savingScore / 1024).toFixed(1)} GB/hari)`;
+        listEl.appendChild(li);
+      });
+
+      // Mulai seed
+      ranked.forEach(article => {
+        client.add(article.magnet, torrent => {
+          stateEl.textContent = "Aktif membantu";
+
+          torrent.on("upload", bytes => {
+            uploaded += bytes;
+            sentEl.textContent = Math.round(uploaded / 1024);
+          });
+        });
+      });
+
+    } catch (e) {
+      stateEl.textContent = "Gagal memuat data";
+      console.error(e);
+    }
+
+  } else {
+    client.destroy();
+    client = null;
+    active = false;
+    btn.textContent = "Aktifkan Bantuan";
+    stateEl.textContent = "Tidak aktif";
+  }
+};
+</script>
+
+</body>
+</html>
