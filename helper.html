@@ -2,169 +2,170 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Bantu Website Tetap Gratis</title>
+<title>Voluntary P2P Helper</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
 
 <style>
 body {
-  font-family: system-ui, Arial, sans-serif;
-  max-width: 560px;
+  font-family: system-ui, sans-serif;
+  background: #0f172a;
+  color: #e5e7eb;
+  max-width: 720px;
   margin: auto;
   padding: 20px;
-  line-height: 1.6;
-  color: #111;
 }
-h1 { font-size: 22px; }
+h1 { font-size: 1.4rem; }
 button {
-  width: 100%;
-  padding: 14px;
-  font-size: 16px;
-  margin-top: 12px;
+  background: #22c55e;
+  color: #052e16;
+  border: none;
+  padding: 12px 18px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
 }
-.box {
-  background: #f4f4f4;
-  padding: 12px;
+button.off {
+  background: #ef4444;
+  color: white;
+}
+.card {
+  background: #020617;
+  padding: 16px;
+  border-radius: 12px;
   margin-top: 15px;
-  border-radius: 6px;
 }
-.small {
-  font-size: 13px;
-  color: #555;
-}
-ul { padding-left: 18px; }
+.small { font-size: 0.9rem; opacity: 0.8; }
+.list { margin-top: 10px; }
+.list div { margin-bottom: 6px; }
 </style>
 </head>
 
 <body>
 
-<h1>🤝 Bantu Website Tetap Gratis</h1>
-
-<p>
-Dengan mengaktifkan halaman ini, browser Anda membantu
-<strong>mengirimkan konten publik</strong>
-kepada pengunjung lain.
-</p>
-
-<p>
-✔ Aman & anonim<br>
-✔ Tanpa login<br>
-✔ Bisa dihentikan kapan saja
+<h1>🧠 Voluntary P2P Helper</h1>
+<p class="small">
+Dengan mengaktifkan, browser Anda membantu distribusi konten populer
+secara aman & terbatas.
 </p>
 
 <button id="toggle">Aktifkan Bantuan</button>
 
-<div class="box">
-  <div><strong>Status:</strong> <span id="state">Tidak aktif</span></div>
-  <div><strong>Data terkirim:</strong> <span id="sent">0</span> KB</div>
-  <div><strong>Potensi hemat server:</strong> <span id="saving">0</span> GB / hari</div>
+<div class="card">
+  <div>Status: <b id="status">Menunggu</b></div>
+  <div>Data terkirim: <b id="uploaded">0 KB</b></div>
+  <div>Peer aktif: <b id="peers">0</b></div>
+  <div>Potensi hemat server: <b id="saving">0 GB / hari</b></div>
 </div>
 
-<div class="box small">
-<strong>Konten yang dibantu:</strong>
-<ul id="list"></ul>
+<div class="card">
+  <b>Konten prioritas:</b>
+  <div id="list" class="list small">Memuat data…</div>
 </div>
 
 <script>
-/* =======================
-   KONFIGURASI
-======================= */
-const POPULAR_JSON_URL = "./popular.json"; // pastikan bisa dibuka
-const MAX_HELP = 10;
-const UPLOAD_LIMIT = 600 * 1024; // 600 KB/s
+const POPULAR_JSON_URL = "./popular.json";
+const STORAGE_KEY = "p2p_helper_active";
 
-/* =======================
-   STATE
-======================= */
-let client = null;
-let active = false;
-let uploaded = 0;
+const ANNOUNCE = [
+  "wss://tracker.openwebtorrent.com",
+  "wss://tracker.btorrent.xyz",
+  "wss://tracker.fastcast.nz"
+];
 
-/* =======================
-   ELEMENT
-======================= */
-const btn = document.getElementById("toggle");
-const stateEl = document.getElementById("state");
-const sentEl = document.getElementById("sent");
+let client;
+let totalUploaded = 0;
+let totalPeers = 0;
+
+const statusEl = document.getElementById("status");
+const uploadedEl = document.getElementById("uploaded");
+const peersEl = document.getElementById("peers");
 const savingEl = document.getElementById("saving");
 const listEl = document.getElementById("list");
+const btn = document.getElementById("toggle");
 
-/* =======================
-   LOAD POPULAR.JSON (AMAN)
-======================= */
-async function loadPopular() {
-  try {
-    const res = await fetch(POPULAR_JSON_URL, { cache: "no-store" });
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    const data = await res.json();
-    if (!data.articles || !data.articles.length) {
-      throw new Error("Data kosong");
-    }
-    return data;
-  } catch (err) {
-    console.error("popular.json error:", err);
-    stateEl.textContent = "Data populer belum tersedia";
-    return null;
-  }
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + " KB";
+  if (bytes < 1024*1024*1024) return (bytes/1024/1024).toFixed(1) + " MB";
+  return (bytes/1024/1024/1024).toFixed(2) + " GB";
 }
 
-/* =======================
-   TOGGLE HELPER
-======================= */
-btn.onclick = async () => {
-  if (active) {
-    client.destroy();
-    client = null;
-    active = false;
-    btn.textContent = "Aktifkan Bantuan";
-    stateEl.textContent = "Tidak aktif";
+function stopHelper() {
+  localStorage.removeItem(STORAGE_KEY);
+  if (client) client.destroy();
+  btn.textContent = "Aktifkan Bantuan";
+  btn.classList.remove("off");
+  statusEl.textContent = "Nonaktif";
+}
+
+async function startHelper() {
+  btn.textContent = "Matikan Bantuan";
+  btn.classList.add("off");
+  statusEl.textContent = "Memuat data…";
+
+  localStorage.setItem(STORAGE_KEY, "1");
+  client = new WebTorrent();
+
+  let res;
+  try {
+    res = await fetch(POPULAR_JSON_URL);
+  } catch {
+    statusEl.textContent = "Gagal memuat data";
     return;
   }
 
-  stateEl.textContent = "Memuat data…";
-  btn.textContent = "Hentikan Bantuan";
-
-  const data = await loadPopular();
-  if (!data) {
-    btn.textContent = "Aktifkan Bantuan";
+  const data = await res.json();
+  if (!data.articles || !data.articles.length) {
+    listEl.textContent = "Data populer belum ada";
     return;
   }
 
-  client = new WebTorrent({ uploadLimit: UPLOAD_LIMIT });
-  active = true;
+  // hitung potensi hemat
+  let saving = 0;
+  data.articles.forEach(a => {
+    saving += (a.sizeMB * a.dailyViews) / 1024;
+  });
+  savingEl.textContent = saving.toFixed(1) + " GB / hari";
 
-  const ranked = data.articles
-    .map(a => ({
-      ...a,
-      savingScore: a.sizeMB * a.dailyViews
-    }))
-    .sort((a, b) => b.savingScore - a.savingScore)
-    .slice(0, MAX_HELP);
-
-  const totalSavingMB = ranked.reduce(
-    (sum, a) => sum + a.savingScore, 0
+  // urutkan paling berat
+  data.articles.sort((a,b) =>
+    (b.sizeMB*b.dailyViews)-(a.sizeMB*a.dailyViews)
   );
-  savingEl.textContent = (totalSavingMB / 1024).toFixed(1);
 
   listEl.innerHTML = "";
-  ranked.forEach(a => {
-    const li = document.createElement("li");
-    li.textContent =
-      `${a.title} (±${(a.savingScore / 1024).toFixed(1)} GB/hari)`;
-    listEl.appendChild(li);
-  });
+  data.articles.forEach(a => {
+    const d = document.createElement("div");
+    d.textContent = "• " + a.title;
+    listEl.appendChild(d);
 
-  ranked.forEach(article => {
-    client.add(article.magnet, torrent => {
-      stateEl.textContent = "Aktif membantu";
+    client.add(a.magnet, { announce: ANNOUNCE }, torrent => {
+      torrent.on("wire", () => {
+        totalPeers++;
+        peersEl.textContent = totalPeers;
+        statusEl.textContent = "Aktif membantu";
+      });
+
       torrent.on("upload", bytes => {
-        uploaded += bytes;
-        sentEl.textContent = Math.round(uploaded / 1024);
+        totalUploaded += bytes;
+        uploadedEl.textContent = formatBytes(totalUploaded);
       });
     });
   });
+}
+
+btn.onclick = () => {
+  if (localStorage.getItem(STORAGE_KEY)) {
+    stopHelper();
+  } else {
+    startHelper();
+  }
 };
+
+// AUTO START jika pernah aktif
+if (localStorage.getItem(STORAGE_KEY)) {
+  startHelper();
+}
 </script>
 
 </body>
