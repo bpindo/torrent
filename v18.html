@@ -1,467 +1,445 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>WebTorrent P2P Share & Telegram - Mobile Friendly</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WebTorrent P2P Share & Telegram - Mobile Friendly</title>
 
-<script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bpindo/p2p-helper@main/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bpindo/p2p-helper@main/style.css" />
 
-<style>
-
-</style>
-
+  <style>
+    /* Tempat untuk CSS tambahan jika diperlukan */
+  </style>
 </head>
 <body>
 
-<h2>📤 WebTorrent P2P Share</h2>
+  <h2>📤 WebTorrent P2P Share</h2>
 
+  <div class="status">
+    Aplikasi web peer-to-peer berbasis <strong>WebTorrent</strong> untuk berbagi file langsung dari browser ke browser secara <strong>real-time</strong>.
+  </div>
 
-<div class="status">
-  Aplikasi web peer-to-peer berbasis <strong>WebTorrent</strong> untuk berbagi file langsung dari browser ke browser secara <strong>real-time</strong>.
-</div>
+  <div class="input-row">
+    <label class="file-btn" for="fileInput">📁 Choose File</label>
+    <input type="file" id="fileInput" onchange="autoSeed()" />
+    <input type="text" id="magnet" placeholder="Tempel magnet / hash (BTIH)" spellcheck="false" autocomplete="off" />
+  </div>
 
-<div class="input-row">
-  <label class="file-btn" for="fileInput">📁 Choose File</label>
-  <input type="file" id="fileInput" onchange="autoSeed()" />
-  <input type="text" id="magnet" placeholder="Tempel magnet / hash (BTIH)" spellcheck="false" autocomplete="off" />
-</div>
+  <div class="status" id="hashInfo" style="display:none;">
+    <code id="hashOnly"></code>
+  </div>
 
-<div class="status" id="hashInfo" style="display:none;"> <code id="hashOnly"></code></div>
+  <div class="btn-row">
+    <button class="btn-edit hidden" id="shareBtn" onclick="shareMagnet()">📣 Share Torrent</button>
+    <button class="btn-copy hidden" id="copyBtn" onclick="copyMagnet()">📋 Salin ID</button>
+  </div>
 
-<div class="btn-row">
-  <button class="btn-edit hidden" id="shareBtn" onclick="shareMagnet()">📣 Share Torrent</button>
-  <button class="btn-copy hidden" id="copyBtn" onclick="copyMagnet()">📋 Salin ID </button>
-</div>
+  <div id="telegram-preview" class="log-card">Log Telegram akan muncul di sini...</div>
+  <button class="btn-download hidden" id="downloadBtn" onclick="download()">⬇️ Download</button>
 
-<div id="telegram-preview" class="log-card">Log Telegram akan muncul di sini...</div>
-<button class="btn-download hidden" id="downloadBtn" onclick="download()">⬇️ Download</button>
+  <div id="info" class="status">ℹ️ Belum ada aktivitas</div>
 
-<div id="info" class="status">ℹ️ Belum ada aktivitas</div>
+  <!-- OLD STATS HIDDEN -->
+  <div class="stats" id="legacyStats" style="display: none;">
+    <strong>📊 Status Torrent</strong>
+    <div>🟢 Mode: <span id="seedStatus">Tidak aktif</span></div>
+    <div>👥 Peer: <span id="peerCount">0</span></div>
+    <div>⬇️ Download: <span id="downloaded">0 B</span></div>
+    <div>⚡ Download speed: <span id="downSpeed">0 B/s</span></div>
+    <div>📦 File: <span id="fileCount">0</span></div>
+    <div>⬆️ Upload total: <span id="uploaded">0 B</span></div>
+    <div>⚡ Upload speed: <span id="upSpeed">0 B/s</span></div>
+  </div>
 
-<!-- OLD STATS HIDDEN -->
-<div class="stats" id="legacyStats" style="display: none;">
-  <strong>📊 Status Torrent</strong>
-  <div>🟢 Mode: <span id="seedStatus">Tidak aktif</span></div>
-  <div>👥 Peer: <span id="peerCount">0</span></div>
-  <div>⬇️ Download: <span id="downloaded">0 B</span></div>
-  <div>⚡ Download speed: <span id="downSpeed">0 B/s</span></div>
-  <div>📦 File: <span id="fileCount">0</span></div>
-  <div>⬆️ Upload total: <span id="uploaded">0 B</span></div>
-  <div>⚡ Upload speed: <span id="upSpeed">0 B/s</span></div>
-</div>
+  <pre id="log" style="display: none;"></pre>
 
-<pre id="log" style="display: none;"></pre>
+  <!-- FLOATING TORRENT STATUS -->
+  <div id="floatingStats" style="display: none;">
+    <div class="fs-title">📊 Torrent Status</div>
+    <div>🟢 Mode: <span id="fsMode">Idle</span></div>
+    <div>👥 Peer: <span id="fsPeer">0</span></div>
+    <div>⬇️ Download: <span id="fsDown">0 B</span></div>
+    <div>⚡ Speed: <span id="fsSpeed">0 B/s</span></div>
+    <div>📦 File: <span id="fsFile">0</span></div>
+    <div>⬆️ Upload: <span id="fsUp">0 B</span></div>
+  </div>
 
-<!-- FLOATING TORRENT STATUS -->
-<div id="floatingStats" style="display: none;">
-  <div class="fs-title">📊 Torrent Status</div>
-  <div>🟢 Mode: <span id="fsMode">Idle</span></div>
-  <div>👥 Peer: <span id="fsPeer">0</span></div>
-  <div>⬇️ Download: <span id="fsDown">0 B</span></div>
-  <div>⚡ Speed: <span id="fsSpeed">0 B/s</span></div>
-  <div>📦 File: <span id="fsFile">0</span></div>
-  <div>⬆️ Upload: <span id="fsUp">0 B</span></div>
-</div>
+  <script>
+    /* ======================
+       KONFIGURASI TELEGRAM
+    ===================== */
+    const TOKEN_SEND = "8384730708:AAHjPCLYpW7wz2B5-jBxMJ17-kH1G1zXZuY";
+    const CHAT_ID_SEND = -1003689025820;
 
-<script>
-  /* ======================
-     KONFIGURASI TELEGRAM
-  ===================== */
-  const TOKEN_SEND = "8384730708:AAHjPCLYpW7wz2B5-jBxMJ17-kH1G1zXZuY";
-  const CHAT_ID_SEND = -1003689025820;
+    const TOKEN_LOG = "359218339:AAF7KH-T3ihEPvHfWPJge_Ax9PdV9GQw2W0"; // bot log
+    const logContainer = document.getElementById("telegram-preview");
 
-  const TOKEN_LOG = "359218339:AAF7KH-T3ihEPvHfWPJge_Ax9PdV9GQw2W0"; // bot log
-  const logContainer = document.getElementById("telegram-preview");
+    /* ======================
+       WEBTORRENT
+    ===================== */
+    const TORRENT_TRACKERS = [
+      "wss://tracker.openwebtorrent.com",
+      "wss://tracker.btorrent.xyz",
+      "udp://tracker.opentrackr.org:1337",
+      "udp://explodie.org:6969"
+    ];
+    const client = new WebTorrent();
+    let currentTorrent = null;
+    let uploadedBytes = 0;
 
-  /* ======================
-     WEBTORRENT
-  ===================== */
-  const TORRENT_TRACKERS = [
-    "wss://tracker.openwebtorrent.com",
-    "wss://tracker.btorrent.xyz",
-    "udp://tracker.opentrackr.org:1337",
-    "udp://explodie.org:6969"
-  ];
-  const client = new WebTorrent();
-  let currentTorrent = null;
-  let uploadedBytes = 0;
-  
-  //let VOLUNTARY_ENABLED = false;
-  
+    const log = msg => {
+      const p = document.getElementById("log");
+      p.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+      p.scrollTop = p.scrollHeight;
+    };
 
-  const log = msg => {
-    const p = document.getElementById("log");
-    p.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
-    p.scrollTop = p.scrollHeight;
-  };
-
-  function format(bytes) {
-    if (bytes > 1024 * 1024) return (bytes / 1024 / 1024).toFixed(2) + " MB";
-    if (bytes > 1024) return (bytes / 1024).toFixed(1) + " KB";
-    return bytes + " B";
-  }
-  function extractHash(input) {
-    if (!input) return null;
-    const m = input.match(/btih:([a-f0-9]{40})/i);
-    if (m) return m[1];
-    if (/^[a-f0-9]{40}$/i.test(input)) return input;
-    return null;
-  }
-  function buildMagnet(hash, name) {
-    let m = `magnet:?xt=urn:btih:${hash}`;
-    if (name) m += `&dn=${encodeURIComponent(name)}`;
-    TORRENT_TRACKERS.forEach(tr => {
-      m += `&tr=${encodeURIComponent(tr)}`;
-    });
-    return m;
-  }
-  
-  /* ======================
-     COPY MAGNET
-  ===================== */
-  function copyMagnet() {
-    const input = document.getElementById("magnet").value.trim();
-    const hash = extractHash(input);
-    if (!hash) return;
-    const text = `magnet:?xt=urn:btih:${hash}`;
-    navigator.clipboard.writeText(text);
-    log("📋 Torrent ID disalin");
-    document.getElementById("info").textContent = "📋 Torrent ID disalin";
-  }
-
-// Fungsi ini dipanggil saat user pilih file dan auto seeding (tombol download tetap hidden)
-function autoSeed() {
-  const fileInput = document.getElementById("fileInput");
-  const magnetInput = document.getElementById("magnet");
-  const hashOnlyEl = document.getElementById("hashOnly");
-
-  if (!fileInput.files.length) return;
-
-  const file = fileInput.files[0];
-  log("📁 File dipilih: " + file.name);
-
-  if (currentTorrent) {
-    try { currentTorrent.destroy(); } catch {}
-    currentTorrent = null;
-  }
-
-  client.seed(file, torrent => {
-    currentTorrent = torrent;
-
-    const hash = torrent.infoHash;
-
-    hashOnlyEl.value = hash;
-    magnetInput.value = `magnet:?xt=urn:btih:${hash}`;
-
-    log("🧲 Torrent siap (hash dibuat)");
-    log("🌱 Seeding otomatis dimulai");
-
-    // Update status UI ketika mulai seeding
-    document.getElementById("info").textContent = "🟢 Mode: AKTIF (Seeder) - Menunggu peer...";
-
-    shareMagnet(true, hash);
-
-    // Tombol download tetap disembunyikan karena user upload/share
-    document.getElementById("downloadBtn").classList.add("hidden");
-
-    torrent.on("wire", () => {
-      log("👥 Peer terhubung");
-      document.getElementById("info").textContent = "🔗 Peer terhubung, mulai upload/download...";
-    });
-
-    torrent.on("upload", bytes => {
-      log(`⬆️ Mengunggah ${format(bytes)} ke peer`);
-      document.getElementById("info").textContent = `⬆️ Mengunggah data ke peer (${format(torrent.uploadSpeed)}/s)`;
-    });
-
-    torrent.on("error", e => {
-      log("❌ Torrent error: " + e.message);
-      document.getElementById("info").textContent = "❌ Error torrent: " + e.message;
-    });
-  });
-}
-
-
-function showManualButtons() {
-  document.getElementById("shareBtn")?.classList.remove("hidden");
-  document.getElementById("copyBtn")?.classList.remove("hidden");
-}
-
-function download() {
-    const input = document.getElementById("magnet").value.trim();
-    const hash = extractHash(input);
-    if (!hash) {
-      alert("Masukkan magnet atau hash yang valid");
-      return;
+    function format(bytes) {
+      if (bytes > 1024 * 1024) return (bytes / 1024 / 1024).toFixed(2) + " MB";
+      if (bytes > 1024) return (bytes / 1024).toFixed(1) + " KB";
+      return bytes + " B";
     }
-    const magnet = buildMagnet(hash);
-    client.add(magnet, torrent => {
-      currentTorrent = torrent;
-		uploadedBytes = 0;
-      document.getElementById("info").textContent = "🔍 Mencari peer...";
-      document.getElementById("seedStatus").textContent = "⏳ Connecting";
-      document.getElementById("info").textContent = "⬇️ Download dimulai";
-      document.getElementById("seedStatus").textContent = "⬇️ Downloading";
-      document.getElementById("uploaded").textContent = "0 B";
-      document.getElementById("upSpeed").textContent = "0 B/s";
-      log("⬇️ Download dimulai");
 
-      torrent.on("download", () => {
-        const p = Math.round(torrent.progress * 100);
-        document.getElementById("info").textContent = `⬇️ Download ${p}%`;
-        document.getElementById("peerCount").textContent = torrent.numPeers;
-        document.getElementById("downloaded").textContent = format(torrent.downloaded);
-        document.getElementById("downSpeed").textContent = format(torrent.downloadSpeed) + "/s";
-        syncFloating();
+    function extractHash(input) {
+      if (!input) return null;
+      const m = input.match(/btih:([a-f0-9]{40})/i);
+      if (m) return m[1];
+      if (/^[a-f0-9]{40}$/i.test(input)) return input;
+      return null;
+    }
+
+    function buildMagnet(hash, name) {
+      let m = `magnet:?xt=urn:btih:${hash}`;
+      if (name) m += `&dn=${encodeURIComponent(name)}`;
+      TORRENT_TRACKERS.forEach(tr => {
+        m += `&tr=${encodeURIComponent(tr)}`;
       });
+      return m;
+    }
 
-      torrent.on("done", () => {
-        log("✅ Download selesai");
-        log("💾 Menyimpan file...");
-        document.getElementById("info").textContent = "💾 Menyimpan file ke browser...";
-        document.getElementById("seedStatus").textContent = "AKTIF (Seeder)";
-        syncFloating();
+    /* ======================
+       COPY MAGNET
+    ===================== */
+    function copyMagnet() {
+      const input = document.getElementById("magnet").value.trim();
+      const hash = extractHash(input);
+      if (!hash) return;
+      const text = `magnet:?xt=urn:btih:${hash}`;
+      navigator.clipboard.writeText(text);
+      log("📋 Torrent ID disalin");
+      document.getElementById("info").textContent = "📋 Torrent ID disalin";
+    }
 
-        document.getElementById("fileCount").textContent = torrent.files.length;
-        torrent.files.forEach(file => {
-          file.getBlob((err, blob) => {
-            if (err) {
-              log("❌ Gagal simpan: " + file.name);
-              return;
-            }
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = file.name;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            log("💾 File tersimpan: " + file.name);
-          });
+    // Fungsi ini dipanggil saat user pilih file dan auto seeding (tombol download tetap hidden)
+    function autoSeed() {
+      const fileInput = document.getElementById("fileInput");
+      const magnetInput = document.getElementById("magnet");
+      const hashOnlyEl = document.getElementById("hashOnly");
+
+      if (!fileInput.files.length) return;
+
+      const file = fileInput.files[0];
+      log("📁 File dipilih: " + file.name);
+
+      if (currentTorrent) {
+        try { currentTorrent.destroy(); } catch {}
+        currentTorrent = null;
+      }
+
+      client.seed(file, torrent => {
+        currentTorrent = torrent;
+
+        const hash = torrent.infoHash;
+
+        hashOnlyEl.value = hash;
+        magnetInput.value = `magnet:?xt=urn:btih:${hash}`;
+
+        log("🧲 Torrent siap (hash dibuat)");
+        log("🌱 Seeding otomatis dimulai");
+
+        // Update status UI ketika mulai seeding
+        document.getElementById("info").textContent = "🟢 Mode: AKTIF (Seeder) - Menunggu peer...";
+
+        shareMagnet(true, hash);
+
+        // Tombol download tetap disembunyikan karena user upload/share
+        document.getElementById("downloadBtn").classList.add("hidden");
+
+        torrent.on("wire", () => {
+          log("👥 Peer terhubung");
+          document.getElementById("info").textContent = "🔗 Peer terhubung, mulai upload/download...";
         });
-        bindSeederStats(torrent);
+
+        torrent.on("upload", bytes => {
+          log(`⬆️ Mengunggah ${format(bytes)} ke peer`);
+          document.getElementById("info").textContent = `⬆️ Mengunggah data ke peer (${format(torrent.uploadSpeed)}/s)`;
+        });
+
+        torrent.on("error", e => {
+          log("❌ Torrent error: " + e.message);
+          document.getElementById("info").textContent = "❌ Error torrent: " + e.message;
+        });
       });
-    });
-  }
+    }
 
-function bindSeederStats(torrent) {
-  // Update peer count saat ada koneksi peer baru
-  torrent.on("wire", () => {
-    const peerCount = torrent.numPeers;
-    document.getElementById("peerCount").textContent = peerCount;
-    log(`👥 Peer terhubung: ${peerCount}`);
-    document.getElementById("info").textContent = `🔗 Peer terhubung: ${peerCount}`;
-  });
+    function showManualButtons() {
+      document.getElementById("shareBtn")?.classList.remove("hidden");
+      document.getElementById("copyBtn")?.classList.remove("hidden");
+    }
 
-  // Update statistik upload dan status saat upload berlangsung
-  let uploadedBytes = 0;
-  torrent.on("upload", bytes => {
-    uploadedBytes += bytes;
-    document.getElementById("uploaded").textContent = format(uploadedBytes);
-    document.getElementById("upSpeed").textContent = format(torrent.uploadSpeed) + "/s";
-    document.getElementById("info").textContent = `⬆️ Mengunggah ${format(bytes)} ke peer (${format(torrent.uploadSpeed)}/s)`;
-    syncFloating();
-  });
+    function download() {
+      const input = document.getElementById("magnet").value.trim();
+      const hash = extractHash(input);
+      if (!hash) {
+        alert("Masukkan magnet atau hash yang valid");
+        return;
+      }
+      const magnet = buildMagnet(hash);
+      client.add(magnet, torrent => {
+        currentTorrent = torrent;
+        uploadedBytes = 0;
+        document.getElementById("info").textContent = "🔍 Mencari peer...";
+        document.getElementById("seedStatus").textContent = "⏳ Connecting";
+        document.getElementById("info").textContent = "⬇️ Download dimulai";
+        document.getElementById("seedStatus").textContent = "⬇️ Downloading";
+        document.getElementById("uploaded").textContent = "0 B";
+        document.getElementById("upSpeed").textContent = "0 B/s";
+        log("⬇️ Download dimulai");
 
-  // Update saat torrent selesai (seeder aktif)
-  torrent.on("done", () => {
-    log("✅ Seeder aktif, upload siap");
-    document.getElementById("seedStatus").textContent = "🟢 AKTIF (Seeder)";
-    document.getElementById("info").textContent = "🟢 Seeder aktif, siap upload ke peer";
-    syncFloating();
-  });
+        torrent.on("download", () => {
+          const p = Math.round(torrent.progress * 100);
+          document.getElementById("info").textContent = `⬇️ Download ${p}%`;
+          document.getElementById("peerCount").textContent = torrent.numPeers;
+          document.getElementById("downloaded").textContent = format(torrent.downloaded);
+          document.getElementById("downSpeed").textContent = format(torrent.downloadSpeed) + "/s";
+          syncFloating();
+        });
 
-  // Tangani error dengan update log dan UI
-  torrent.on("error", err => {
-    log("❌ Error seeding: " + err.message);
-    document.getElementById("info").textContent = "❌ Error: " + err.message;
-  });
-}
+        torrent.on("done", () => {
+          log("✅ Download selesai");
+          log("💾 Menyimpan file...");
+          document.getElementById("info").textContent = "💾 Menyimpan file ke browser...";
+          document.getElementById("seedStatus").textContent = "AKTIF (Seeder)";
+          syncFloating();
 
-
-  function syncFloating() {
-    const mode = document.getElementById("seedStatus").textContent;
-    const fsMode = document.getElementById("fsMode");
-
-    fsMode.textContent = mode;
-    fsMode.className = "";
-
-    if (mode.includes("Download")) fsMode.classList.add("mode-download");
-    if (mode.includes("Seeder")) fsMode.classList.add("mode-seed");
-
-    document.getElementById("fsPeer").textContent =
-      document.getElementById("peerCount").textContent;
-
-    document.getElementById("fsDown").textContent =
-      document.getElementById("downloaded").textContent;
-
-    document.getElementById("fsSpeed").textContent =
-      document.getElementById("downSpeed").textContent;
-
-    document.getElementById("fsFile").textContent =
-      document.getElementById("fileCount").textContent;
-
-    document.getElementById("fsUp").textContent =
-      document.getElementById("uploaded").textContent;
-	  
-  }
-
-  /* ======================
-     SHARE TORRENT 
-  ===================== */
-async function shareMagnet(auto = false, hashOverride = null) {
-
-  const shareBtn = document.getElementById("shareBtn");
-
-  const hash =
-    hashOverride ||
-    document.getElementById("hashOnly")?.value ||
-    extractHash(document.getElementById("magnet").value);
-
-  if (!hash) {
-    log("❌ Share gagal: hash belum siap");
-    return;
-  }
-
-  const text = `${hash}\n`;
-
-  log(auto ? "🤖 Auto-share hash..." : "📣 Share hash...");
-
-  // 🔒 KUNCI tombol saat auto-share
-  if (auto && shareBtn) {
-    shareBtn.disabled = true;
-  }
-
-  await fetch(`https://api.telegram.org/bot${TOKEN_SEND}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: CHAT_ID_SEND,
-      text
-    })
-  });
-
-  log("✅ Hash terkirim");
-
-  // 🔒 PASTIKAN tetap terkunci jika auto
-  if (auto && shareBtn) {
-    shareBtn.disabled = true;
-  }
-}
-
-
-// Saat tombol copy di Telegram ditekan
-function copyText(button, text) {
-  navigator.clipboard.writeText(text).then(() => {
-    setMagnetAsDownloader(text);   // isi magnet input
-    showDownloadButtonIfValid();   // tampilkan tombol download
-
-    const oldNotif = button.parentElement.querySelector(".notif");
-    if (oldNotif) oldNotif.remove();
-
-    const span = document.createElement("span");
-    span.className = "notif";
-    span.textContent = "✔ Magnet masuk";
-    button.parentElement.appendChild(span);
-
-    setTimeout(() => span.remove(), 2000);
-  });
-}
-
-
-  function fetchUpdates(token) {
-    fetch(`https://api.telegram.org/bot${token}/getUpdates`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.result && data.result.length > 0) {
-          const botMessages = data.result.filter((u) => {
-            const msg = u.message || u.channel_post || u.edited_message;
-            return msg && msg.from && msg.from.is_bot === true;
+          document.getElementById("fileCount").textContent = torrent.files.length;
+          torrent.files.forEach(file => {
+            file.getBlob((err, blob) => {
+              if (err) {
+                log("❌ Gagal simpan: " + file.name);
+                return;
+              }
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = file.name;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              log("💾 File tersimpan: " + file.name);
+            });
           });
-          if (botMessages.length > 0) {
-            const messages = botMessages.slice(-1).reverse();
-
-logContainer.innerHTML = messages
-  .map((u) => {
-    const msg = u.message || u.channel_post || u.edited_message;
-    const text = msg.text || "";
-    return `
-      <div class="message">
-        <span>${text}</span>
-        <button class="copyBtn" onclick="copyText(this, \`${text.replace(/`/g, "\\`")}\`)">
-          Copy
-        </button>
-      </div>
-    `;
-  })
-  .join("");
-
-          } else logContainer.innerHTML = "Tidak ada pesan dari bot.";
-        } else logContainer.innerHTML = "Tidak ada pesan.";
-      })
-      .catch((err) => {
-        logContainer.innerHTML = "Terjadi error: " + err;
+          bindSeederStats(torrent);
+        });
       });
-  }
+    }
 
-  // ambil log saat halaman dimuat
-  fetchUpdates(TOKEN_LOG);
-  // Ambil log saat halaman dimuat
+    function bindSeederStats(torrent) {
+      // Update peer count saat ada koneksi peer baru
+      torrent.on("wire", () => {
+        const peerCount = torrent.numPeers;
+        document.getElementById("peerCount").textContent = peerCount;
+        log(`👥 Peer terhubung: ${peerCount}`);
+        document.getElementById("info").textContent = `🔗 Peer terhubung: ${peerCount}`;
+      });
 
-// Setup interval auto-refresh setiap 15 detik
-setInterval(() => {
-  console.log("Refreshing Telegram logs...");
-  fetchUpdates(TOKEN_LOG);
-}, 10000);
+      // Update statistik upload dan status saat upload berlangsung
+      let uploadedBytes = 0;
+      torrent.on("upload", bytes => {
+        uploadedBytes += bytes;
+        document.getElementById("uploaded").textContent = format(uploadedBytes);
+        document.getElementById("upSpeed").textContent = format(torrent.uploadSpeed) + "/s";
+        document.getElementById("info").textContent = `⬆️ Mengunggah ${format(bytes)} ke peer (${format(torrent.uploadSpeed)}/s)`;
+        syncFloating();
+      });
 
-function setMagnetAsDownloader(text) {
-  const hash = extractHash(text);
-  if (!hash) {
-    alert("Teks yang dicopy bukan hash/magnet valid");
-    return;
-  }
+      // Update saat torrent selesai (seeder aktif)
+      torrent.on("done", () => {
+        log("✅ Seeder aktif, upload siap");
+        document.getElementById("seedStatus").textContent = "🟢 AKTIF (Seeder)";
+        document.getElementById("info").textContent = "🟢 Seeder aktif, siap upload ke peer";
+        syncFloating();
+      });
 
-  const magnetInput = document.getElementById("magnet");
-  magnetInput.value = `magnet:?xt=urn:btih:${hash}`;
+      // Tangani error dengan update log dan UI
+      torrent.on("error", err => {
+        log("❌ Error seeding: " + err.message);
+        document.getElementById("info").textContent = "❌ Error: " + err.message;
+      });
+    }
 
-  // ubah status UI
-  document.getElementById("info").textContent = "📥 Magnet diterima, siap download";
-  document.getElementById("seedStatus").textContent = "⬇️ Siap Download";
-  syncFloating();
+    function syncFloating() {
+      const mode = document.getElementById("seedStatus").textContent;
+      const fsMode = document.getElementById("fsMode");
 
-  // scroll ke atas supaya kelihatan
-  window.scrollTo({ top: 0, behavior: "smooth" });
+      fsMode.textContent = mode;
+      fsMode.className = "";
 
-  // 🔥 OPSIONAL: auto download
-  // download();
-}
+      if (mode.includes("Download")) fsMode.classList.add("mode-download");
+      if (mode.includes("Seeder")) fsMode.classList.add("mode-seed");
 
-// Fungsi cek magnet valid & tampilkan tombol download
-function showDownloadButtonIfValid() {
-  const magnetInput = document.getElementById("magnet");
-  const downloadBtn = document.getElementById("downloadBtn");
+      document.getElementById("fsPeer").textContent = document.getElementById("peerCount").textContent;
+      document.getElementById("fsDown").textContent = document.getElementById("downloaded").textContent;
+      document.getElementById("fsSpeed").textContent = document.getElementById("downSpeed").textContent;
+      document.getElementById("fsFile").textContent = document.getElementById("fileCount").textContent;
+      document.getElementById("fsUp").textContent = document.getElementById("uploaded").textContent;
+    }
 
-  const hash = extractHash(magnetInput.value.trim());
-  if (hash) {
-    downloadBtn.classList.remove("hidden");
-  } else {
-    downloadBtn.classList.add("hidden");
-  }
-}
+    /* ======================
+       SHARE TORRENT 
+    ===================== */
+    async function shareMagnet(auto = false, hashOverride = null) {
+      const shareBtn = document.getElementById("shareBtn");
 
-// Event saat input magnet diubah manual (paste, ketik, dll)
-document.getElementById("magnet").addEventListener("input", () => {
-  showManualButtons();        // tampilkan tombol share & copy manual
-  showDownloadButtonIfValid(); // tampilkan tombol download jika valid
-});
+      const hash =
+        hashOverride ||
+        document.getElementById("hashOnly")?.value ||
+        extractHash(document.getElementById("magnet").value);
 
-document.getElementById("magnet").addEventListener("input", () => {
-  showManualButtons();
-});
+      if (!hash) {
+        log("❌ Share gagal: hash belum siap");
+        return;
+      }
 
-</script>
+      const text = `${hash}\n`;
+
+      log(auto ? "🤖 Auto-share hash..." : "📣 Share hash...");
+
+      // 🔒 KUNCI tombol saat auto-share
+      if (auto && shareBtn) {
+        shareBtn.disabled = true;
+      }
+
+      await fetch(`https://api.telegram.org/bot${TOKEN_SEND}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: CHAT_ID_SEND,
+          text
+        })
+      });
+
+      log("✅ Hash terkirim");
+
+      // 🔒 PASTIKAN tetap terkunci jika auto
+      if (auto && shareBtn) {
+        shareBtn.disabled = true;
+      }
+    }
+
+    // Saat tombol copy di Telegram ditekan
+    function copyText(button, text) {
+      navigator.clipboard.writeText(text).then(() => {
+        setMagnetAsDownloader(text);   // isi magnet input
+        showDownloadButtonIfValid();   // tampilkan tombol download
+
+        const oldNotif = button.parentElement.querySelector(".notif");
+        if (oldNotif) oldNotif.remove();
+
+        const span = document.createElement("span");
+        span.className = "notif";
+        span.textContent = "✔ Magnet masuk";
+        button.parentElement.appendChild(span);
+
+        setTimeout(() => span.remove(), 2000);
+      });
+    }
+
+    function fetchUpdates(token) {
+      fetch(`https://api.telegram.org/bot${token}/getUpdates`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.result && data.result.length > 0) {
+            const botMessages = data.result.filter((u) => {
+              const msg = u.message || u.channel_post || u.edited_message;
+              return msg && msg.from && msg.from.is_bot === true;
+            });
+            if (botMessages.length > 0) {
+              const messages = botMessages.slice(-1).reverse();
+
+              logContainer.innerHTML = messages
+                .map((u) => {
+                  const msg = u.message || u.channel_post || u.edited_message;
+                  const text = msg.text || "";
+                  return `
+                    <div class="message">
+                      <span>${text}</span>
+                      <button class="copyBtn" onclick="copyText(this, \`${text.replace(/`/g, "\\`")}\`)">
+                        Copy
+                      </button>
+                    </div>
+                  `;
+                })
+                .join("");
+
+            } else logContainer.innerHTML = "Tidak ada pesan dari bot.";
+          } else logContainer.innerHTML = "Tidak ada pesan.";
+        })
+        .catch((err) => {
+          logContainer.innerHTML = "Terjadi error: " + err;
+        });
+    }
+
+    // ambil log saat halaman dimuat
+    fetchUpdates(TOKEN_LOG);
+
+    // Setup interval auto-refresh setiap 10 detik
+    setInterval(() => {
+      console.log("Refreshing Telegram logs...");
+      fetchUpdates(TOKEN_LOG);
+    }, 10000);
+
+    function setMagnetAsDownloader(text) {
+      const hash = extractHash(text);
+      if (!hash) {
+        alert("Teks yang dicopy bukan hash/magnet valid");
+        return;
+      }
+
+      const magnetInput = document.getElementById("magnet");
+      magnetInput.value = `magnet:?xt=urn:btih:${hash}`;
+
+      // ubah status UI
+      document.getElementById("info").textContent = "📥 Magnet diterima, siap download";
+      document.getElementById("seedStatus").textContent = "⬇️ Siap Download";
+      syncFloating();
+
+      // scroll ke atas supaya kelihatan
+      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      // 🔥 OPSIONAL: auto download
+      // download();
+    }
+
+    // Fungsi cek magnet valid & tampilkan tombol download
+    function showDownloadButtonIfValid() {
+      const magnetInput = document.getElementById("magnet");
+      const downloadBtn = document.getElementById("downloadBtn");
+
+      const hash = extractHash(magnetInput.value.trim());
+      if (hash) {
+        downloadBtn.classList.remove("hidden");
+      } else {
+        downloadBtn.classList.add("hidden");
+      }
+    }
+
+    // Event saat input magnet diubah manual (paste, ketik, dll)
+    document.getElementById("magnet").addEventListener("input", () => {
+      showManualButtons();        // tampilkan tombol share & copy manual
+      showDownloadButtonIfValid(); // tampilkan tombol download jika valid
+    });
+  </script>
 
 </body>
 </html>
