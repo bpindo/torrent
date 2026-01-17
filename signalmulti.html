@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>P2P Chat Multi User (Tanpa Server)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body {
+  font-family: monospace;
+  background: #111;
+  color: #0f0;
+  padding: 15px;
+}
+textarea, input, button {
+  width: 100%;
+  margin: 6px 0;
+  padding: 8px;
+  background: #000;
+  color: #0f0;
+  border: 1px solid #0f0;
+}
+button { cursor: pointer; }
+pre {
+  background: #000;
+  height: 220px;
+  overflow-y: auto;
+  padding: 10px;
+}
+.peer {
+  border: 1px dashed #0f0;
+  padding: 8px;
+  margin-bottom: 10px;
+}
+</style>
+</head>
+<body>
+
+<h2>🌐 P2P Multi Chat (3 User, Tanpa Server)</h2>
+
+<label>🧑 Nickname</label>
+<input id="nick" placeholder="Masukkan nickname">
+
+<button onclick="start()">🚀 Start Peer</button>
+
+<h3>📡 Signaling (Copy / Paste)</h3>
+<div id="signals"></div>
+
+<h3>💬 Kirim Pesan</h3>
+<input id="msg" placeholder="Pesan">
+<button onclick="send()">Kirim ke Semua</button>
+
+<h3>📜 Log</h3>
+<pre id="log"></pre>
+
+<script src="https://cdn.jsdelivr.net/npm/simple-peer@9/simplepeer.min.js"></script>
+<script>
+const peers = {};
+let myNick = '';
+
+function log(txt) {
+  const el = document.getElementById('log');
+  el.textContent += txt + '\n';
+  el.scrollTop = el.scrollHeight;
+}
+
+function createPeer(id, initiator) {
+  const peer = new SimplePeer({ initiator, trickle: false });
+
+  peer.on('signal', data => {
+    document.getElementById(`signal-${id}`).value =
+      JSON.stringify(data, null, 2);
+  });
+
+  peer.on('connect', () => {
+    log(`✅ CONNECTED ke ${id}`);
+  });
+
+  peer.on('data', d => {
+    const msg = JSON.parse(d.toString());
+    log(`👤 ${msg.nick}: ${msg.text}`);
+  });
+
+  peer.on('close', () => log(`⚠️ ${id} closed`));
+  peer.on('error', e => log(`❌ ${id}: ${e}`));
+
+  peers[id] = peer;
+}
+
+function addPeerUI(id) {
+  const div = document.createElement('div');
+  div.className = 'peer';
+  div.innerHTML = `
+    <strong>Peer ${id}</strong>
+    <textarea id="signal-${id}" rows="6"
+      placeholder="Signal ${id}"></textarea>
+    <button onclick="apply('${id}')">Apply Signal</button>
+  `;
+  document.getElementById('signals').appendChild(div);
+}
+
+function start() {
+  myNick = document.getElementById('nick').value || 'Anon';
+
+  // Buat 2 peer manual (total 3 user)
+  ['peer1','peer2'].forEach((id,i)=>{
+    addPeerUI(id);
+    createPeer(id, true);
+  });
+
+  log(`🚀 Peer started sebagai ${myNick}`);
+}
+
+function apply(id) {
+  try {
+    const txt = document.getElementById(`signal-${id}`).value;
+    peers[id].signal(JSON.parse(txt));
+    log(`📡 Signal applied ke ${id}`);
+  } catch {
+    alert('Signal JSON tidak valid');
+  }
+}
+
+function send() {
+  const text = document.getElementById('msg').value;
+  if (!text) return;
+
+  const payload = JSON.stringify({ nick: myNick, text });
+  Object.values(peers).forEach(p => {
+    if (p.connected) p.send(payload);
+  });
+
+  log(`🗨️ Kamu: ${text}`);
+  document.getElementById('msg').value = '';
+}
+</script>
+
+</body>
+</html>
