@@ -2,17 +2,41 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>P2P Chat Multi User (Stable)</title>
+<title>P2P Chat Multi User (GitHub Safe)</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
 <style>
-body { font-family: monospace; background:#111; color:#0f0; padding:15px }
-input, button { width:100%; margin:6px 0; background:#000; color:#0f0; border:1px solid #0f0; padding:8px }
-button:disabled { opacity:0.5 }
-pre { background:#000; padding:10px; height:260px; overflow:auto }
+body {
+  font-family: monospace;
+  background:#111;
+  color:#0f0;
+  padding:15px;
+}
+input, button {
+  width:100%;
+  margin:6px 0;
+  background:#000;
+  color:#0f0;
+  border:1px solid #0f0;
+  padding:8px;
+}
+button:disabled {
+  opacity:0.5;
+}
+pre {
+  background:#000;
+  padding:10px;
+  height:260px;
+  overflow:auto;
+}
 </style>
 </head>
+
 <body>
 
-<h3>🌐 P2P Chat Multi User (Stable)</h3>
+<h3>🌐 P2P Chat Multi User</h3>
+
 <div><b>ID kamu:</b> <span id="id"></span></div>
 
 <input id="msg" placeholder="Tulis pesan..." disabled>
@@ -20,45 +44,62 @@ pre { background:#000; padding:10px; height:260px; overflow:auto }
 
 <pre id="log"></pre>
 
+<!-- SIMPLE PEER -->
 <script src="https://cdn.jsdelivr.net/npm/simple-peer@9/simplepeer.min.js"></script>
+
 <script>
 /* ======================
-   INIT
+   ID & UI
 ====================== */
-const myId = 'user' + Math.floor(Math.random() * 10000);
-document.getElementById('id').textContent = myId;
+const myId = "user" + Math.floor(Math.random() * 10000);
+document.getElementById("id").textContent = myId;
 
-const logEl = document.getElementById('log');
-const msgInput = document.getElementById('msg');
-const sendBtn = document.getElementById('sendBtn');
+const logEl = document.getElementById("log");
+const msgInput = document.getElementById("msg");
+const sendBtn = document.getElementById("sendBtn");
 
 function log(t) {
   logEl.textContent += t + "\n";
   logEl.scrollTop = logEl.scrollHeight;
 }
 
-const peers = {}; // peerId -> SimplePeer
+/* ======================
+   AUTO WS / WSS (GITHUB SAFE)
+====================== */
+const SIGNALING_HOST = "p2p-chat-production-3693.up.railway.app";
+
+const WS_URL =
+  location.protocol === "https:"
+    ? "wss://" + SIGNALING_HOST
+    : "ws://" + SIGNALING_HOST;
+
+log("🔌 Connecting to " + WS_URL);
+
+const ws = new WebSocket(WS_URL);
 
 /* ======================
-   WEBSOCKET
+   PEERS
 ====================== */
-const ws = new WebSocket("ws://p2p-chat-production-3693.up.railway.app");
+const peers = {}; // peerId -> SimplePeer
 
 ws.onopen = () => {
-  log("CONNECTED to signaling server");
-  ws.send(JSON.stringify({ type: "register", id: myId }));
+  log("✅ CONNECTED signaling");
+  ws.send(JSON.stringify({
+    type: "register",
+    id: myId
+  }));
 };
 
 ws.onmessage = e => {
   const data = JSON.parse(e.data);
 
-  // Daftar peer online
+  // daftar peer
   if (data.type === "peers") {
     data.peers.forEach(pid => {
       if (pid === myId || peers[pid]) return;
 
-      const initiator = myId < pid; // 🔑 ANTI GLARE
-      log(`⏳ Membuat peer ke ${pid} (${initiator ? "initiator" : "receiver"})`);
+      const initiator = myId < pid;
+      log("⏳ Membuat peer ke " + pid);
 
       const peer = new SimplePeer({
         initiator,
@@ -71,11 +112,11 @@ ws.onmessage = e => {
     return;
   }
 
-  // Terima signaling
+  // signaling
   if (data.signal) {
     if (!peers[data.from]) {
       const initiator = myId < data.from;
-      log(`⏳ Peer auto dibuat dari ${data.from} (${initiator ? "initiator" : "receiver"})`);
+      log("⏳ Peer auto dibuat dari " + data.from);
 
       const peer = new SimplePeer({
         initiator,
@@ -88,17 +129,18 @@ ws.onmessage = e => {
 
     try {
       peers[data.from].signal(data.signal);
-    } catch (e) {
+    } catch (err) {
       log("❌ Signal error dari " + data.from);
     }
   }
 };
 
 /* ======================
-   PEER SETUP
+   PEER HANDLER
 ====================== */
 function setupPeer(peer, pid) {
-  peer.on('signal', s => {
+
+  peer.on("signal", s => {
     ws.send(JSON.stringify({
       from: myId,
       to: pid,
@@ -106,43 +148,43 @@ function setupPeer(peer, pid) {
     }));
   });
 
-  peer.on('connect', () => {
+  peer.on("connect", () => {
     log("✅ CONNECTED: " + pid);
     updateUI();
   });
 
-  peer.on('data', d => {
+  peer.on("data", d => {
     log(pid + ": " + d.toString());
   });
 
-  peer.on('close', () => {
+  peer.on("close", () => {
     log("⚠️ DISCONNECTED: " + pid);
     delete peers[pid];
     updateUI();
   });
 
-  peer.on('error', err => {
+  peer.on("error", err => {
     log("❌ ERROR (" + pid + "): " + err.message);
   });
 }
 
 /* ======================
-   SEND
+   SEND MESSAGE
 ====================== */
 function send() {
-  const m = msgInput.value.trim();
-  if (!m) return;
+  const text = msgInput.value.trim();
+  if (!text) return;
 
   let sent = 0;
-  for (const p of Object.values(peers)) {
+  Object.values(peers).forEach(p => {
     if (p.connected) {
-      p.send(m);
+      p.send(text);
       sent++;
     }
-  }
+  });
 
   if (sent > 0) {
-    log("Kamu: " + m);
+    log("Kamu: " + text);
   } else {
     log("⚠️ Tidak ada peer siap");
   }
@@ -151,7 +193,7 @@ function send() {
 }
 
 /* ======================
-   UI
+   UI STATE
 ====================== */
 function updateUI() {
   const ready = Object.values(peers).some(p => p.connected);
