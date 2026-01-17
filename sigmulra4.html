@@ -7,113 +7,122 @@
 
 <style>
 :root {
-  --wa-green: #008069;
-  --wa-bg: #efeae2;
-  --me: #d9fdd3;
-  --peer: #ffffff;
+  --wa-green:#008069;
+  --wa-bg:#efeae2;
+  --me:#d9fdd3;
+  --peer:#ffffff;
 }
 
-* { box-sizing: border-box }
+*{box-sizing:border-box}
 
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: var(--wa-bg);
-  height: 100vh;
-  display: flex;
-  justify-content: center;
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:var(--wa-bg);
+  display:flex;
+  justify-content:center;
 }
 
-/* APP */
-.app {
-  width: 100%;
-  max-width: 520px;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
+/* ===== APP ===== */
+.app{
+  width:100%;
+  max-width:520px;
+  height:100dvh;               /* 🔥 FIX MOBILE */
+  display:flex;
+  flex-direction:column;
 }
 
-/* HEADER */
-header {
-  background: var(--wa-green);
-  color: #fff;
-  padding: 12px 14px env(safe-area-inset-top);
-  font-weight: 600;
-  display: flex;
-  justify-content: space-between;
+/* ===== HEADER ===== */
+header{
+  background:var(--wa-green);
+  color:#fff;
+  padding:10px 14px;
+  font-weight:600;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:14px;
 }
 
-/* CHAT */
-#chat {
-  flex: 1;
-  padding: 10px 10px 90px;
-  overflow-y: auto;
+/* ===== CHAT ===== */
+#chat{
+  flex:1;
+  padding:8px 10px 70px;
+  overflow-y:auto;
 }
 
-/* ROW */
-.row { display: flex; margin-bottom: 6px }
-.me-row { justify-content: flex-end }
-.peer-row { justify-content: flex-start }
-.sys-row { justify-content: center }
+/* ===== ROW ===== */
+.row{display:flex;margin-bottom:4px}
+.me-row{justify-content:flex-end}
+.peer-row{justify-content:flex-start}
+.sys-row{justify-content:center}
 
-/* BUBBLE */
-.bubble {
-  max-width: 78%;
-  padding: 8px 12px;
-  font-size: 15px;
-  line-height: 1.45;
-  border-radius: 10px;
-  box-shadow: 0 1px 1px rgba(0,0,0,.12);
-  white-space: pre-wrap;
+/* ===== BUBBLE ===== */
+.bubble{
+  max-width:78%;
+  padding:7px 10px;
+  font-size:14px;
+  line-height:1.4;
+  border-radius:10px;
+  box-shadow:0 1px 1px rgba(0,0,0,.1);
+  white-space:pre-wrap;
 }
 
-.me { background: var(--me); border-top-right-radius: 4px }
-.peer { background: var(--peer); border-top-left-radius: 4px }
-.system {
-  background: #e4e6e8;
-  font-size: 12px;
-  color: #555;
-  padding: 4px 10px;
-  border-radius: 6px;
+.me{background:var(--me);border-top-right-radius:4px}
+.peer{background:var(--peer);border-top-left-radius:4px}
+.system{
+  background:#e4e6e8;
+  font-size:11px;
+  color:#555;
+  padding:4px 8px;
+  border-radius:6px;
 }
 
-/* FOOTER */
-footer {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 520px;
-  background: #f0f2f5;
-  padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
-  display: flex;
-  gap: 8px;
+/* ===== FOOTER ===== */
+footer{
+  position:fixed;
+  bottom:0;
+  left:50%;
+  transform:translateX(-50%);
+  width:100%;
+  max-width:520px;
+  background:#f0f2f5;
+  padding:6px 8px calc(6px + env(safe-area-inset-bottom));
+  display:flex;
+  gap:6px;
 }
 
-textarea {
-  flex: 1;
-  resize: none;
-  max-height: 120px;
-  padding: 10px 14px;
-  border-radius: 20px;
-  border: 1px solid #ccc;
-  font-size: 15px;
-  outline: none;
+/* TEXTAREA */
+textarea{
+  flex:1;
+  resize:none;
+  max-height:80px;            /* 🔥 BATAS TINGGI */
+  padding:8px 12px;
+  border-radius:18px;
+  border:1px solid #ccc;
+  font-size:14px;             /* 🔥 FIX SCALE */
+  line-height:1.3;
+  outline:none;
 }
 
-button {
-  background: var(--wa-green);
-  color: #fff;
-  border: none;
-  border-radius: 50%;
-  width: 42px;
-  height: 42px;
-  font-size: 18px;
-  cursor: pointer;
+/* BUTTON */
+button{
+  background:var(--wa-green);
+  color:#fff;
+  border:none;
+  border-radius:50%;
+  width:38px;
+  height:38px;
+  font-size:16px;
 }
 
-button:disabled { opacity: .4 }
+button:disabled{opacity:.4}
+
+/* ===== DESKTOP ===== */
+@media (min-width:768px){
+  .bubble{font-size:15px}
+  textarea{font-size:15px}
+}
 </style>
 </head>
 
@@ -138,120 +147,101 @@ button:disabled { opacity: .4 }
 <script src="https://cdn.jsdelivr.net/npm/simple-peer@9/simplepeer.min.js"></script>
 
 <script>
-/* ===== ID ===== */
-const myId = "user" + Math.floor(Math.random() * 10000);
-document.getElementById("myid").textContent = myId;
+/* ID */
+const myId="user"+Math.floor(Math.random()*10000);
+document.getElementById("myid").textContent=myId;
 
-const chat = document.getElementById("chat");
-const msg = document.getElementById("msg");
-const send = document.getElementById("send");
+const chat=document.getElementById("chat");
+const msg=document.getElementById("msg");
+const send=document.getElementById("send");
 
-/* ===== UI ===== */
-function addBubble(text, type) {
-  const row = document.createElement("div");
-  row.className = "row " + type + "-row";
-
-  const bubble = document.createElement("div");
-  bubble.className = "bubble " + type;
-  bubble.textContent = text;
-
-  row.appendChild(bubble);
+function addBubble(text,type){
+  const row=document.createElement("div");
+  row.className="row "+type+"-row";
+  const b=document.createElement("div");
+  b.className="bubble "+type;
+  b.textContent=text;
+  row.appendChild(b);
   chat.appendChild(row);
-  chat.scrollTop = chat.scrollHeight;
+  chat.scrollTop=chat.scrollHeight;
 }
 
-/* ===== SIGNALING ===== */
-const SIGNALING_HOST = "p2p-chat-production-3693.up.railway.app";
-const WS_URL = location.protocol === "https:" ? "wss://" + SIGNALING_HOST : "ws://" + SIGNALING_HOST;
+/* SIGNALING */
+const HOST="p2p-chat-production-3693.up.railway.app";
+const WS=location.protocol==="https:"?"wss://"+HOST:"ws://"+HOST;
 
-addBubble("Menghubungkan ke server…", "system");
+addBubble("Menghubungkan…","system");
 
-const ws = new WebSocket(WS_URL);
-const peers = {};
+const ws=new WebSocket(WS);
+const peers={};
 
-ws.onopen = () => {
-  addBubble("Server terhubung", "system");
-  ws.send(JSON.stringify({ type: "register", id: myId }));
+ws.onopen=()=>{
+  addBubble("Server terhubung","system");
+  ws.send(JSON.stringify({type:"register",id:myId}));
 };
 
-ws.onmessage = e => {
-  const data = JSON.parse(e.data);
-
-  if (data.type === "peers") {
-    data.peers.forEach(pid => {
-      if (pid !== myId && !peers[pid]) createPeer(pid);
-    });
+ws.onmessage=e=>{
+  const d=JSON.parse(e.data);
+  if(d.type==="peers"){
+    d.peers.forEach(p=>p!==myId&&!peers[p]&&createPeer(p));
     return;
   }
-
-  if (data.signal) {
-    if (!peers[data.from]) createPeer(data.from);
-    peers[data.from].signal(data.signal);
+  if(d.signal){
+    if(!peers[d.from])createPeer(d.from);
+    peers[d.from].signal(d.signal);
   }
 };
 
-/* ===== PEER ===== */
-function createPeer(pid) {
-  addBubble("Menghubungkan ke " + pid, "system");
+function createPeer(pid){
+  addBubble("Menghubungkan ke "+pid,"system");
+  const peer=new SimplePeer({initiator:myId<pid,trickle:false});
+  peers[pid]=peer;
 
-  const peer = new SimplePeer({
-    initiator: myId < pid,
-    trickle: false
-  });
+  peer.on("signal",s=>ws.send(JSON.stringify({from:myId,to:pid,signal:s})));
 
-  peers[pid] = peer;
-
-  peer.on("signal", s => {
-    ws.send(JSON.stringify({ from: myId, to: pid, signal: s }));
-  });
-
-  peer.on("connect", () => {
-    peer.ready = true;
-    addBubble("Terhubung dengan " + pid, "system");
+  peer.on("connect",()=>{
+    peer.ready=true;
+    addBubble("Terhubung dengan "+pid,"system");
     updateUI();
   });
 
-  peer.on("data", d => addBubble(d.toString(), "peer"));
+  peer.on("data",d=>addBubble(d.toString(),"peer"));
 
-  peer.on("close", () => {
-    addBubble("Terputus dari " + pid, "system");
+  peer.on("close",()=>{
+    addBubble("Terputus dari "+pid,"system");
     delete peers[pid];
     updateUI();
   });
 }
 
-/* ===== SEND ===== */
-function sendMessage() {
-  const text = msg.value.trim();
-  if (!text) return;
-
-  Object.values(peers).forEach(p => p.ready && p.send(text));
-  addBubble(text, "me");
-  msg.value = "";
-  msg.style.height = "auto";
+/* SEND */
+function sendMsg(){
+  const t=msg.value.trim();
+  if(!t)return;
+  Object.values(peers).forEach(p=>p.ready&&p.send(t));
+  addBubble(t,"me");
+  msg.value="";
+  msg.style.height="auto";
 }
 
-send.onclick = sendMessage;
+send.onclick=sendMsg;
 
-/* ENTER TO SEND */
-msg.addEventListener("keydown", e => {
-  if (e.key === "Enter" && !e.shiftKey) {
+msg.addEventListener("keydown",e=>{
+  if(e.key==="Enter"&&!e.shiftKey){
     e.preventDefault();
-    sendMessage();
+    sendMsg();
   }
 });
 
-/* AUTO RESIZE */
-msg.addEventListener("input", () => {
-  msg.style.height = "auto";
-  msg.style.height = msg.scrollHeight + "px";
+msg.addEventListener("input",()=>{
+  msg.style.height="auto";
+  msg.style.height=Math.min(msg.scrollHeight,80)+"px";
 });
 
-/* UI STATE */
-function updateUI() {
-  const ready = Object.values(peers).some(p => p.ready);
-  msg.disabled = !ready;
-  send.disabled = !ready;
+function updateUI(){
+  const r=Object.values(peers).some(p=>p.ready);
+  msg.disabled=!r;
+  send.disabled=!r;
 }
 </script>
 
