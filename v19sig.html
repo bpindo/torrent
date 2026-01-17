@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WebTorrent + P2P Chat</title>
+
+<script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/simple-peer@9/simplepeer.min.js"></script>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bpindo/p2p-helper@main/style.css">
+
+<style>
+/* ===== WEBTORRENT ===== */
+#update-log {
+  margin-top: 20px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  background: #f9f9f9;
+  height: 150px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+/* ===== CHAT ===== */
+.chat-box {
+  margin-top: 30px;
+  padding: 15px;
+  background: #111;
+  color: #0f0;
+  font-family: monospace;
+}
+.chat-box input,
+.chat-box button {
+  width: 100%;
+  margin: 6px 0;
+  background: #000;
+  color: #0f0;
+  border: 1px solid #0f0;
+  padding: 8px;
+}
+.chat-box pre {
+  background: #000;
+  padding: 10px;
+  height: 220px;
+  overflow: auto;
+}
+</style>
+</head>
+
+<body>
+
+<h2>📤 WebTorrent P2P Share</h2>
+
+<!-- ===== WEBTORRENT UI (ASLI) ===== -->
+<input type="file" id="fileInput" onchange="autoSeed()" />
+<input type="text" id="magnet" placeholder="Tempel magnet / hash" />
+<button id="downloadBtn" onclick="download()" class="hidden">⬇️ Download</button>
+
+<div id="info">ℹ️ Belum ada aktivitas</div>
+<pre id="log" style="display:none"></pre>
+
+<div id="update-log"><b>Update Log</b></div>
+
+<hr>
+
+<!-- ===== CHAT UI ===== -->
+<div class="chat-box">
+  <h3>🌐 P2P Chat</h3>
+  <div><b>ID:</b> <span id="chatId"></span></div>
+
+  <input id="chatMsg" placeholder="Tulis pesan..." disabled>
+  <button id="chatSend" disabled onclick="sendChat()">Kirim</button>
+
+  <pre id="chatLog"></pre>
+</div>
+
+<!-- ================== CHAT SCRIPT ================== -->
+<script>
+const myId = "user" + Math.floor(Math.random()*10000);
+document.getElementById("chatId").textContent = myId;
+
+const chatLog = document.getElementById("chatLog");
+const chatMsg = document.getElementById("chatMsg");
+const chatSend = document.getElementById("chatSend");
+
+function chatLogAdd(t){
+  chatLog.textContent += t + "\n";
+  chatLog.scrollTop = chatLog.scrollHeight;
+}
+
+const SIGNALING_HOST = "p2p-chat-production-3693.up.railway.app";
+const WS_URL = (location.protocol==="https:"?"wss://":"ws://")+SIGNALING_HOST;
+
+chatLogAdd("🔌 Connecting " + WS_URL);
+const ws = new WebSocket(WS_URL);
+const peers = {};
+
+ws.onopen = ()=>{
+  ws.send(JSON.stringify({type:"register",id:myId}));
+};
+
+ws.onmessage = e=>{
+  const d = JSON.parse(e.data);
+
+  if(d.type==="peers"){
+    d.peers.forEach(pid=>{
+      if(pid===myId || peers[pid]) return;
+      createPeer(pid,myId<pid);
+    });
+  }
+
+  if(d.signal){
+    if(!peers[d.from]) createPeer(d.from,myId<d.from);
+    peers[d.from].signal(d.signal);
+  }
+};
+
+function createPeer(pid, initiator){
+  const p = new SimplePeer({initiator,trickle:false});
+  peers[pid]=p;
+
+  p.on("signal",s=>{
+    ws.send(JSON.stringify({from:myId,to:pid,signal:s}));
+  });
+
+  p.on("connect",()=>{
+    chatLogAdd("✅ CONNECTED: "+pid);
+    updateChatUI();
+  });
+
+  p.on("data",d=>{
+    chatLogAdd(pid+": "+d.toString());
+  });
+
+  p.on("close",()=>{
+    chatLogAdd("⚠️ DISCONNECTED: "+pid);
+    delete peers[pid];
+    updateChatUI();
+  });
+}
+
+function sendChat(){
+  const t = chatMsg.value.trim();
+  if(!t) return;
+
+  let sent=false;
+  Object.values(peers).forEach(p=>{
+    if(p.connected){ p.send(t); sent=true; }
+  });
+
+  chatLogAdd(sent ? "Kamu: "+t : "⚠️ Tidak ada peer");
+  chatMsg.value="";
+}
+
+function updateChatUI(){
+  const ready = Object.values(peers).some(p=>p.connected);
+  chatMsg.disabled = !ready;
+  chatSend.disabled = !ready;
+}
+</script>
+
+<!-- ================== WEBTORRENT SCRIPT ================== -->
+<script>
+const client = new WebTorrent();
+function autoSeed(){
+  const f = fileInput.files[0];
+  if(!f) return;
+
+  client.seed(f,t=>{
+    magnet.value="magnet:?xt=urn:btih:"+t.infoHash;
+    info.textContent="🟢 Seeder aktif";
+  });
+}
+function download(){
+  client.add(magnet.value,t=>{
+    t.on("done",()=>info.textContent="✅ Download selesai");
+  });
+}
+</script>
+
+</body>
+</html>
