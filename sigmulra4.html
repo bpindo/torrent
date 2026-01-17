@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>P2P Chat – WhatsApp Style</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
 <style>
 :root {
@@ -13,7 +13,9 @@
   --peer: #ffffff;
 }
 
-* { box-sizing: border-box }
+* {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
@@ -21,14 +23,24 @@ body {
   background: var(--wa-bg);
   height: 100vh;
   display: flex;
-  flex-direction: column;
+  justify-content: center;
 }
 
-/* HEADER */
+/* ===== APP WRAPPER ===== */
+.app {
+  width: 100%;
+  max-width: 520px;        /* desktop friendly */
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--wa-bg);
+}
+
+/* ===== HEADER ===== */
 header {
   background: var(--wa-green);
   color: #fff;
-  padding: 12px 14px;
+  padding: 12px 14px env(safe-area-inset-top);
   font-weight: 600;
   display: flex;
   justify-content: space-between;
@@ -36,60 +48,68 @@ header {
 }
 
 header small {
-  opacity: .8;
-  font-weight: normal;
+  font-size: 12px;
+  opacity: .85;
 }
 
-/* CHAT */
+/* ===== CHAT ===== */
 #chat {
   flex: 1;
-  padding: 12px;
+  padding: 10px 10px 80px;
   overflow-y: auto;
 }
 
-/* BUBBLES */
+/* ===== ROW ===== */
 .row {
   display: flex;
   margin-bottom: 6px;
 }
 
-.me-row { justify-content: flex-end }
-.peer-row { justify-content: flex-start }
-.sys-row { justify-content: center }
+.me-row { justify-content: flex-end; }
+.peer-row { justify-content: flex-start; }
+.sys-row { justify-content: center; }
 
+/* ===== BUBBLE ===== */
 .bubble {
-  max-width: 75%;
+  max-width: 78%;
   padding: 8px 12px;
   font-size: 14px;
-  line-height: 1.4;
-  border-radius: 8px;
-  box-shadow: 0 1px 1px rgba(0,0,0,.1);
+  line-height: 1.45;
+  border-radius: 10px;
+  box-shadow: 0 1px 1px rgba(0,0,0,.12);
+  word-wrap: break-word;
 }
 
 .me {
   background: var(--me);
-  border-top-right-radius: 0;
+  border-top-right-radius: 4px;
 }
 
 .peer {
   background: var(--peer);
-  border-top-left-radius: 0;
+  border-top-left-radius: 4px;
 }
 
 .system {
-  background: #e0e0e0;
+  background: #e4e6e8;
   font-size: 12px;
   color: #555;
-  border-radius: 6px;
   padding: 4px 10px;
+  border-radius: 6px;
 }
 
-/* FOOTER */
+/* ===== FOOTER ===== */
 footer {
-  display: flex;
-  gap: 6px;
-  padding: 10px;
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 520px;
   background: #f0f2f5;
+  padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+  display: flex;
+  gap: 8px;
 }
 
 input {
@@ -97,7 +117,8 @@ input {
   padding: 10px 14px;
   border-radius: 20px;
   border: 1px solid #ccc;
-  font-size: 14px;
+  font-size: 15px;
+  outline: none;
 }
 
 button {
@@ -114,10 +135,19 @@ button {
 button:disabled {
   opacity: .4;
 }
+
+/* ===== MOBILE FEEL ===== */
+@media (max-width: 480px) {
+  .bubble {
+    font-size: 15px;
+  }
+}
 </style>
 </head>
 
 <body>
+
+<div class="app">
 
 <header>
   <div>P2P Chat</div>
@@ -127,23 +157,25 @@ button:disabled {
 <div id="chat"></div>
 
 <footer>
-  <input id="msg" placeholder="Tulis pesan" disabled>
+  <input id="msg" placeholder="Tulis pesan…" disabled>
   <button id="send" disabled>➤</button>
 </footer>
+
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/simple-peer@9/simplepeer.min.js"></script>
 
 <script>
-/* ========== ID ========== */
+/* ===== ID ===== */
 const myId = "user" + Math.floor(Math.random() * 10000);
 document.getElementById("myid").textContent = myId;
 
-/* ========== ELEMENT ========== */
+/* ===== ELEMENT ===== */
 const chat = document.getElementById("chat");
 const msg = document.getElementById("msg");
 const send = document.getElementById("send");
 
-/* ========== UI ========== */
+/* ===== UI ===== */
 function addBubble(text, type) {
   const row = document.createElement("div");
   row.className = "row " + type + "-row";
@@ -157,9 +189,11 @@ function addBubble(text, type) {
   chat.scrollTop = chat.scrollHeight;
 }
 
-/* ========== SIGNALING ========== */
+/* ===== SIGNALING ===== */
 const SIGNALING_HOST = "p2p-chat-production-3693.up.railway.app";
-const WS_URL = location.protocol === "https:" ? "wss://" + SIGNALING_HOST : "ws://" + SIGNALING_HOST;
+const WS_URL = location.protocol === "https:"
+  ? "wss://" + SIGNALING_HOST
+  : "ws://" + SIGNALING_HOST;
 
 addBubble("Menghubungkan ke server…", "system");
 
@@ -187,7 +221,7 @@ ws.onmessage = e => {
   }
 };
 
-/* ========== PEER ========== */
+/* ===== PEER ===== */
 function createPeer(pid) {
   addBubble("Menghubungkan ke " + pid, "system");
 
@@ -203,7 +237,7 @@ function createPeer(pid) {
   });
 
   peer.on("connect", () => {
-    peer.ready = true;               // 🔥 FIX UTAMA
+    peer.ready = true;          // FIX UTAMA
     addBubble("Terhubung dengan " + pid, "system");
     updateUI();
   });
@@ -219,7 +253,7 @@ function createPeer(pid) {
   });
 }
 
-/* ========== SEND ========== */
+/* ===== SEND ===== */
 send.onclick = () => {
   const text = msg.value.trim();
   if (!text) return;
@@ -236,7 +270,7 @@ send.onclick = () => {
   msg.value = "";
 };
 
-/* ========== UI STATE ========== */
+/* ===== UI STATE ===== */
 function updateUI() {
   const ready = Object.values(peers).some(p => p.ready);
   msg.disabled = !ready;
