@@ -1,210 +1,123 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>WebTorrent P2P Share + Chat</title>
-
+<meta charset="UTF-8">
+<title>WebRTC + WebTorrent P2P</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/simple-peer@9/simplepeer.min.js"></script>
-
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bpindo/p2p-helper@main/style.css">
-
 <style>
-/* ===== UPDATE LOG ===== */
-#update-log {
-  margin-top: 20px;
-  padding: 10px;
-  border: 1px solid #ddd;
-  background: #f9f9f9;
-  height: 150px;
-  overflow-y: auto;
+body {
   font-family: monospace;
-  font-size: 13px;
+  background:#111;
+  color:#0f0;
+  padding:15px;
 }
-#update-log .log-entry {
-  margin-bottom: 4px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 2px;
+textarea, input, button {
+  width:100%;
+  background:#000;
+  color:#0f0;
+  border:1px solid #0f0;
+  padding:5px;
+  margin:4px 0;
 }
-
-/* ===== CHAT ===== */
-#p2p-chat {
-  margin-top: 30px;
-  padding: 15px;
-  background: #111;
-  color: #0f0;
-  font-family: monospace;
-}
-#p2p-chat input,
-#p2p-chat button {
-  width: 100%;
-  margin: 6px 0;
-  background: #000;
-  color: #0f0;
-  border: 1px solid #0f0;
-  padding: 8px;
-}
-#p2p-chat pre {
-  background: #000;
-  padding: 10px;
-  height: 260px;
-  overflow: auto;
+#log {
+  height:220px;
+  overflow:auto;
+  border:1px solid #0f0;
+  padding:5px;
 }
 </style>
 </head>
-
 <body>
 
-<h2>📤 WebTorrent P2P Share</h2>
+<h3>🔗 WebRTC + WebTorrent (Pure HTML)</h3>
 
-<div class="status">
-  Aplikasi web peer-to-peer berbasis <strong>WebTorrent</strong> untuk berbagi file langsung dari browser ke browser.
-</div>
+<button onclick="createOffer()">Create Offer</button>
+<textarea id="offer" placeholder="Offer"></textarea>
 
-<div class="input-row">
-  <label class="file-btn" for="fileInput">📁 Choose File</label>
-  <input type="file" id="fileInput" onchange="autoSeed()" />
-  <input type="text" id="magnet" placeholder="Tempel magnet / hash (BTIH)" />
-</div>
+<button onclick="createAnswer()">Create Answer</button>
+<textarea id="answer" placeholder="Answer"></textarea>
 
-<input type="hidden" id="hashOnly" />
+<button onclick="setAnswer()">Set Answer</button>
 
-<div class="btn-row">
-  <button class="btn-edit hidden" id="shareBtn" onclick="shareMagnet()">📣 Share Torrent</button>
-  <button class="btn-copy hidden" id="copyBtn" onclick="copyMagnet()">📋 Salin ID</button>
-</div>
+<hr>
 
-<div id="telegram-preview" class="log-card">Log Telegram akan muncul di sini...</div>
-<button class="btn-download hidden" id="downloadBtn" onclick="download()">⬇️ Download</button>
+<div id="log"></div>
 
-<div id="info" class="status">ℹ️ Belum ada aktivitas</div>
+<input id="msg" placeholder="Ketik chat / magnet link">
+<button onclick="send()">Send</button>
 
-<pre id="log" style="display:none"></pre>
-
-<div id="update-log">
-  <strong>Update Log</strong><br>
-</div>
-
-<!-- ================================================= -->
-<!-- ================= P2P CHAT ===================== -->
-<!-- ================================================= -->
-
-<div id="p2p-chat">
-  <h3>🌐 P2P Chat Multi User</h3>
-  <div><b>ID kamu:</b> <span id="p2p-id"></span></div>
-
-  <input id="p2p-msg" placeholder="Tulis pesan..." disabled>
-  <button id="p2p-send" disabled>Kirim</button>
-
-  <pre id="p2p-log"></pre>
-</div>
-
-<!-- ================================================= -->
-<!-- ================= CHAT SCRIPT =================== -->
-<!-- ================================================= -->
 <script>
-/* ===== ISOLATED P2P CHAT ===== */
-const p2pId = "user" + Math.floor(Math.random() * 10000);
-document.getElementById("p2p-id").textContent = p2pId;
+const pc = new RTCPeerConnection();
+let channel;
+const logBox = document.getElementById("log");
 
-const p2pLog = document.getElementById("p2p-log");
-const p2pMsg = document.getElementById("p2p-msg");
-const p2pSend = document.getElementById("p2p-send");
+const client = new WebTorrent();
 
-function p2pAdd(msg) {
-  p2pLog.textContent += msg + "\n";
-  p2pLog.scrollTop = p2pLog.scrollHeight;
+function log(txt){
+  logBox.innerHTML += txt + "<br>";
+  logBox.scrollTop = logBox.scrollHeight;
 }
 
-const SIGNALING_HOST = "p2p-chat-production-3693.up.railway.app";
-const WS_URL =
-  location.protocol === "https:"
-    ? "wss://" + SIGNALING_HOST
-    : "ws://" + SIGNALING_HOST;
-
-p2pAdd("🔌 Connecting " + WS_URL);
-
-const ws = new WebSocket(WS_URL);
-const peers = {};
-
-ws.onopen = () => {
-  ws.send(JSON.stringify({ type: "register", id: p2pId }));
+pc.ondatachannel = e => {
+  channel = e.channel;
+  setupChannel();
 };
 
-ws.onmessage = e => {
-  const data = JSON.parse(e.data);
+function setupChannel(){
+  channel.onopen = ()=>log("✅ WebRTC connected");
+  channel.onmessage = e => {
+    log("Peer: " + e.data);
+    if(e.data.startsWith("magnet:")){
+      startTorrent(e.data);
+    }
+  };
+}
 
-  if (data.type === "peers") {
-    data.peers.forEach(pid => {
-      if (pid === p2pId || peers[pid]) return;
-      createPeer(pid, p2pId < pid);
+async function createOffer(){
+  channel = pc.createDataChannel("chat");
+  setupChannel();
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  offerBox.value = JSON.stringify(offer);
+}
+
+async function createAnswer(){
+  const offer = JSON.parse(offerBox.value);
+  await pc.setRemoteDescription(offer);
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  answerBox.value = JSON.stringify(answer);
+}
+
+async function setAnswer(){
+  const answer = JSON.parse(answerBox.value);
+  await pc.setRemoteDescription(answer);
+}
+
+function send(){
+  const text = msg.value;
+  channel.send(text);
+  log("Me: " + text);
+  msg.value = "";
+}
+
+function startTorrent(magnet){
+  log("⬇️ Start torrent...");
+  client.add(magnet, torrent => {
+    log("📁 " + torrent.name);
+    torrent.on('download', () => {
+      log("⬇️ " + (torrent.progress*100).toFixed(1) + "%");
     });
-    return;
-  }
-
-  if (data.signal) {
-    if (!peers[data.from]) {
-      createPeer(data.from, p2pId < data.from);
-    }
-    peers[data.from].signal(data.signal);
-  }
-};
-
-function createPeer(pid, initiator) {
-  const peer = new SimplePeer({ initiator, trickle: false });
-  peers[pid] = peer;
-
-  peer.on("signal", s => {
-    ws.send(JSON.stringify({ from: p2pId, to: pid, signal: s }));
-  });
-
-  peer.on("connect", () => {
-    p2pAdd("✅ CONNECTED: " + pid);
-    updateUI();
-  });
-
-  peer.on("data", d => {
-    p2pAdd(pid + ": " + d.toString());
-  });
-
-  peer.on("close", () => {
-    p2pAdd("⚠️ DISCONNECTED: " + pid);
-    delete peers[pid];
-    updateUI();
+    torrent.files.forEach(file => {
+      file.appendTo(document.body);
+    });
   });
 }
 
-p2pSend.onclick = () => {
-  const text = p2pMsg.value.trim();
-  if (!text) return;
-
-  let sent = false;
-  Object.values(peers).forEach(p => {
-    if (p.connected) {
-      p.send(text);
-      sent = true;
-    }
-  });
-
-  p2pAdd(sent ? "Kamu: " + text : "⚠️ Tidak ada peer");
-  p2pMsg.value = "";
-};
-
-function updateUI() {
-  const ready = Object.values(peers).some(p => p.connected);
-  p2pMsg.disabled = !ready;
-  p2pSend.disabled = !ready;
-}
-</script>
-
-<!-- ================================================= -->
-<!-- ========== SCRIPT WEBTORRENT + TELEGRAM ========= -->
-<!-- ================================================= -->
-<script>
-/* ========= SELURUH SCRIPT ASLI TELEGRAM + WEBTORRENT ========= */
-/* (dipersingkat di jawaban ini demi keterbacaan,
-   tapi di implementasi nyata PASTE PUNYA KAMU DI SINI TANPA DIUBAH) */
+const offerBox = document.getElementById("offer");
+const answerBox = document.getElementById("answer");
+const msg = document.getElementById("msg");
 </script>
 
 </body>
