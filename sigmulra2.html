@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>P2P Chat Multi User (GitHub Safe)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    body {
+      font-family: monospace;
+      background: #111;
+      color: #0f0;
+      padding: 15px;
+    }
+
+    input,
+    button {
+      width: 100%;
+      margin: 6px 0;
+      padding: 8px;
+      background: #000;
+      color: #0f0;
+      border: 1px solid #0f0;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+    }
+
+    pre {
+      background: #000;
+      padding: 10px;
+      height: 260px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h3>🌐 P2P Chat Multi User</h3>
+
+  <div>
+    <b>ID kamu:</b> <span id="id"></span>
+  </div>
+
+  <input id="msg" placeholder="Tulis pesan..." disabled />
+  <button id="sendBtn" disabled>Kirim</button>
+
+  <pre id="log"></pre>
+
+  <!-- SimplePeer -->
+  <script src="https://cdn.jsdelivr.net/npm/simple-peer@9/simplepeer.min.js"></script>
+
+  <script>
+    /* ======================================================
+       BASIC UI & ID
+    ====================================================== */
+    const myId = "user" + Math.floor(Math.random() * 10000);
+    document.getElementById("id").textContent = myId;
+
+    const logEl = document.getElementById("log");
+    const msgInput = document.getElementById("msg");
+    const sendBtn = document.getElementById("sendBtn");
+
+    function log(text) {
+      logEl.textContent += text + "\n";
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    sendBtn.onclick = sendMessage;
+
+    /* ======================================================
+       SIGNALING SERVER (AUTO WS / WSS)
+    ====================================================== */
+    const SIGNALING_HOST = "p2p-chat-production-3693.up.railway.app";
+
+    const WS_URL =
+      location.protocol === "https:"
+        ? "wss://" + SIGNALING_HOST
+        : "ws://" + SIGNALING_HOST;
+
+    log("🔌 Connecting to " + WS_URL);
+
+    const ws = new WebSocket(WS_URL);
+
+    /* ======================================================
+       PEER STORAGE
+    ====================================================== */
+    const peers = {}; // { peerId: SimplePeer }
+
+    ws.onopen = () => {
+      log("✅ CONNECTED signaling");
+      ws.send(JSON.stringify({
+        type: "register",
+        id: myId
+      }));
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      // daftar peer
+      if (data.type === "peers") {
+        data.peers.forEach(pid => {
+          if (pid === myId || peers[pid]) return;
+
+          createPeer(pid);
+        });
+        return;
+      }
+
+      // signaling data
+      if (data.signal) {
+        if (!peers[data.from]) {
+          createPeer(data.from);
+        }
+
+        try {
+          peers[data.from].signal(data.signal);
+        } catch {
+          log("❌ Signal error dari " + data.from);
+        }
+      }
+    };
+
+    /* ======================================================
+       PEER FACTORY
+    ====================================================== */
+    function createPeer(peerId) {
+      const initiator = myId < peerId;
+      log("⏳ Membuat peer ke " + peerId);
+
+      const peer = new SimplePeer({
+        initiator,
+        trickle: false
+      });
+
+      setupPeer(peer, peerId);
+      peers[peerId] = peer;
+    }
+
+    function setupPeer(peer, peerId) {
+      peer.on("signal", signal => {
+        ws.send(JSON.stringify({
+          from: myId,
+          to: peerId,
+          signal
+        }));
+      });
+
+      peer.on("connect", () => {
+        log("✅ CONNECTED: " + peerId);
+        updateUI();
+      });
+
+      peer.on("data", data => {
+        log(peerId + ": " + data.toString());
+      });
+
+      peer.on("close", () => {
+        log("⚠️ DISCONNECTED: " + peerId);
+        delete peers[peerId];
+        updateUI();
+      });
+
+      peer.on("error", err => {
+        log("❌ ERROR (" + peerId + "): " + err.message);
+      });
+    }
+
+    /* ======================================================
+       SEND MESSAGE
+    ====================================================== */
+    function sendMessage() {
+      const text = msgInput.value.trim();
+      if (!text) return;
+
+      let sent = 0;
+      Object.values(peers).forEach(peer => {
+        if (peer.connected) {
+          peer.send(text);
+          sent++;
+        }
+      });
+
+      log(sent ? "Kamu: " + text : "⚠️ Tidak ada peer siap");
+      msgInput.value = "";
+    }
+
+    /* ======================================================
+       UI STATE
+    ====================================================== */
+    function updateUI() {
+      const ready = Object.values(peers).some(p => p.connected);
+      msgInput.disabled = !ready;
+      sendBtn.disabled = !ready;
+    }
+  </script>
+
+</body>
+</html>
