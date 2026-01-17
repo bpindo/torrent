@@ -1,137 +1,168 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<title>P2P Chat Multi User (Tanpa Server)</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Simple-Peer Multi-Peer Mesh Manual Signaling</title>
 <style>
-body {
-  font-family: monospace;
-  background: #111;
-  color: #0f0;
-  padding: 15px;
-}
-textarea, input, button {
-  width: 100%;
-  margin: 6px 0;
-  padding: 8px;
-  background: #000;
-  color: #0f0;
-  border: 1px solid #0f0;
-}
-button { cursor: pointer; }
-pre {
-  background: #000;
-  height: 220px;
-  overflow-y: auto;
-  padding: 10px;
-}
-.peer {
-  border: 1px dashed #0f0;
-  padding: 8px;
-  margin-bottom: 10px;
-}
+  body { font-family: monospace; background:#111; color:#0f0; padding:15px; }
+  textarea, input, button { width: 100%; background:#000; color:#0f0; border:1px solid #0f0; margin:8px 0; padding:8px; box-sizing: border-box; font-family: monospace;}
+  button { cursor:pointer; }
+  pre { background:#000; padding:10px; height: 200px; overflow-y: auto; white-space: pre-wrap; }
+  .peer-section { border: 1px solid #0f0; padding: 10px; margin-bottom: 12px; }
 </style>
 </head>
 <body>
 
-<h2>🌐 P2P Multi Chat (3 User, Tanpa Server)</h2>
+<h2>🌐 Multi-Peer Mesh Manual Signaling</h2>
 
-<label>🧑 Nickname</label>
-<input id="nick" placeholder="Masukkan nickname">
+<div><strong>ID Kamu:</strong> <span id="myId"></span></div>
 
-<button onclick="start()">🚀 Start Peer</button>
+<div class="peer-section">
+  <strong>1️⃣ Tambah Peer</strong><br/>
+  <input type="text" id="peerIdInput" placeholder="Masukkan Peer ID lain, misal: anom1234" />
+  <button onclick="addPeer()">Tambah Peer & Jadi Initiator</button>
+</div>
 
-<h3>📡 Signaling (Copy / Paste)</h3>
-<div id="signals"></div>
+<div class="peer-section">
+  <strong>2️⃣ Signaling untuk Peer</strong><br/>
+  <textarea id="signalInput" rows="6" placeholder="Paste signaling dari peer lain di sini"></textarea>
+  <button onclick="applySignal()">Apply Signaling dari Peer</button>
+</div>
 
-<h3>💬 Kirim Pesan</h3>
-<input id="msg" placeholder="Pesan">
-<button onclick="send()">Kirim ke Semua</button>
+<div class="peer-section">
+  <strong>3️⃣ Kirim Pesan ke Semua Peer</strong><br/>
+  <input type="text" id="messageInput" placeholder="Tulis pesan di sini..." />
+  <button onclick="broadcastMessage()">Kirim Pesan</button>
+</div>
 
-<h3>📜 Log</h3>
-<pre id="log"></pre>
+<div>
+  <strong>📡 Log Pesan & Sistem</strong>
+  <pre id="log"></pre>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/simple-peer@9/simplepeer.min.js"></script>
 <script>
-const peers = {};
-let myNick = '';
+  const myId = 'anom' + Math.floor(1000 + Math.random() * 9000);
+  document.getElementById('myId').textContent = myId;
 
-function log(txt) {
-  const el = document.getElementById('log');
-  el.textContent += txt + '\n';
-  el.scrollTop = el.scrollHeight;
-}
+  const peers = {}; // { peerId: SimplePeerInstance }
+  const logEl = document.getElementById('log');
 
-function createPeer(id, initiator) {
-  const peer = new SimplePeer({ initiator, trickle: false });
-
-  peer.on('signal', data => {
-    document.getElementById(`signal-${id}`).value =
-      JSON.stringify(data, null, 2);
-  });
-
-  peer.on('connect', () => {
-    log(`✅ CONNECTED ke ${id}`);
-  });
-
-  peer.on('data', d => {
-    const msg = JSON.parse(d.toString());
-    log(`👤 ${msg.nick}: ${msg.text}`);
-  });
-
-  peer.on('close', () => log(`⚠️ ${id} closed`));
-  peer.on('error', e => log(`❌ ${id}: ${e}`));
-
-  peers[id] = peer;
-}
-
-function addPeerUI(id) {
-  const div = document.createElement('div');
-  div.className = 'peer';
-  div.innerHTML = `
-    <strong>Peer ${id}</strong>
-    <textarea id="signal-${id}" rows="6"
-      placeholder="Signal ${id}"></textarea>
-    <button onclick="apply('${id}')">Apply Signal</button>
-  `;
-  document.getElementById('signals').appendChild(div);
-}
-
-function start() {
-  myNick = document.getElementById('nick').value || 'Anon';
-
-  // Buat 2 peer manual (total 3 user)
-  ['peer1','peer2'].forEach((id,i)=>{
-    addPeerUI(id);
-    createPeer(id, true);
-  });
-
-  log(`🚀 Peer started sebagai ${myNick}`);
-}
-
-function apply(id) {
-  try {
-    const txt = document.getElementById(`signal-${id}`).value;
-    peers[id].signal(JSON.parse(txt));
-    log(`📡 Signal applied ke ${id}`);
-  } catch {
-    alert('Signal JSON tidak valid');
+  function log(msg) {
+    logEl.textContent += msg + "\n";
+    logEl.scrollTop = logEl.scrollHeight;
   }
-}
 
-function send() {
-  const text = document.getElementById('msg').value;
-  if (!text) return;
+  // Tambah peer baru dan mulai sebagai initiator
+  function addPeer() {
+    const peerId = document.getElementById('peerIdInput').value.trim();
+    if (!peerId) return alert('Masukkan Peer ID');
 
-  const payload = JSON.stringify({ nick: myNick, text });
-  Object.values(peers).forEach(p => {
-    if (p.connected) p.send(payload);
-  });
+    if (peers[peerId]) {
+      alert('Sudah ada koneksi dengan ' + peerId);
+      return;
+    }
 
-  log(`🗨️ Kamu: ${text}`);
-  document.getElementById('msg').value = '';
-}
+    const peer = new SimplePeer({ initiator: true, trickle: false });
+    setupPeer(peer, peerId);
+
+    peers[peerId] = peer;
+
+    log(`⏳ Membuat koneksi sebagai initiator ke ${peerId}`);
+  }
+
+  // Setup event pada peer SimplePeer
+  function setupPeer(peer, peerId) {
+    peer.on('signal', data => {
+      const json = JSON.stringify({ from: myId, to: peerId, signal: data }, null, 2);
+      log(`### Signal untuk ${peerId} (salin dan kirim ke peer ini):\n${json}`);
+    });
+
+    peer.on('connect', () => {
+      log(`✅ Terhubung dengan ${peerId}`);
+      sendSystemMessage(peer, `Halo dari ${myId}`);
+    });
+
+    peer.on('data', data => {
+      try {
+        const msgObj = JSON.parse(data);
+        log(`👤 ${msgObj.from}: ${msgObj.text}`);
+      } catch {
+        log(`👤 Data dari ${peerId}: ${data.toString()}`);
+      }
+    });
+
+    peer.on('error', err => {
+      log(`❌ Error dengan ${peerId}: ${err}`);
+    });
+
+    peer.on('close', () => {
+      log(`⚠️ Koneksi dengan ${peerId} ditutup`);
+      delete peers[peerId];
+    });
+  }
+
+  // Apply signaling JSON yang diterima dari peer lain
+  function applySignal() {
+    const input = document.getElementById('signalInput').value.trim();
+    if (!input) return alert('Masukkan signaling JSON');
+    let obj;
+    try {
+      obj = JSON.parse(input);
+    } catch {
+      return alert('Signaling JSON tidak valid');
+    }
+
+    if (!obj.from || !obj.to || !obj.signal) {
+      return alert('Format signaling salah (harus ada from, to, signal)');
+    }
+
+    // Jika belum ada peer, buat baru (receiver)
+    if (!peers[obj.from]) {
+      const peer = new SimplePeer({ initiator: false, trickle: false });
+      setupPeer(peer, obj.from);
+      peers[obj.from] = peer;
+      log(`⏳ Menerima koneksi dari ${obj.from} (receiver)`);
+    }
+
+    peers[obj.from].signal(obj.signal);
+    log(`### Signaling diterapkan untuk koneksi ${obj.from}`);
+
+    document.getElementById('signalInput').value = '';
+  }
+
+  // Kirim pesan ke semua peer yang terkoneksi
+  function broadcastMessage() {
+    const msg = document.getElementById('messageInput').value.trim();
+    if (!msg) return;
+
+    const msgObj = { from: myId, text: msg };
+    const jsonMsg = JSON.stringify(msgObj);
+
+    let sentCount = 0;
+    for (const peerId in peers) {
+      const peer = peers[peerId];
+      if (peer.connected) {
+        peer.send(jsonMsg);
+        sentCount++;
+      }
+    }
+
+    if (sentCount === 0) {
+      alert('Tidak ada peer terkoneksi untuk mengirim pesan');
+      return;
+    }
+
+    log(`🗨️ Kamu (broadcast ke ${sentCount} peer): ${msg}`);
+    document.getElementById('messageInput').value = '';
+  }
+
+  // Kirim pesan sistem (misal halo) ke satu peer
+  function sendSystemMessage(peer, text) {
+    const msgObj = { from: myId, text };
+    peer.send(JSON.stringify(msgObj));
+  }
 </script>
 
 </body>
