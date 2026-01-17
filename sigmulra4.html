@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>P2P Chat – WhatsApp Style</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+:root {
+  --wa-green: #008069;
+  --wa-bg: #efeae2;
+  --me: #d9fdd3;
+  --peer: #ffffff;
+}
+
+* { box-sizing: border-box }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--wa-bg);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* HEADER */
+header {
+  background: var(--wa-green);
+  color: #fff;
+  padding: 12px 14px;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+header small {
+  opacity: .8;
+  font-weight: normal;
+}
+
+/* CHAT */
+#chat {
+  flex: 1;
+  padding: 12px;
+  overflow-y: auto;
+}
+
+/* BUBBLES */
+.row {
+  display: flex;
+  margin-bottom: 6px;
+}
+
+.me-row { justify-content: flex-end }
+.peer-row { justify-content: flex-start }
+.sys-row { justify-content: center }
+
+.bubble {
+  max-width: 75%;
+  padding: 8px 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  border-radius: 8px;
+  box-shadow: 0 1px 1px rgba(0,0,0,.1);
+}
+
+.me {
+  background: var(--me);
+  border-top-right-radius: 0;
+}
+
+.peer {
+  background: var(--peer);
+  border-top-left-radius: 0;
+}
+
+.system {
+  background: #e0e0e0;
+  font-size: 12px;
+  color: #555;
+  border-radius: 6px;
+  padding: 4px 10px;
+}
+
+/* FOOTER */
+footer {
+  display: flex;
+  gap: 6px;
+  padding: 10px;
+  background: #f0f2f5;
+}
+
+input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 20px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+}
+
+button {
+  background: var(--wa-green);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: .4;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div>P2P Chat</div>
+  <small id="myid"></small>
+</header>
+
+<div id="chat"></div>
+
+<footer>
+  <input id="msg" placeholder="Tulis pesan" disabled>
+  <button id="send" disabled>➤</button>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/simple-peer@9/simplepeer.min.js"></script>
+
+<script>
+/* ========== ID ========== */
+const myId = "user" + Math.floor(Math.random() * 10000);
+document.getElementById("myid").textContent = myId;
+
+/* ========== ELEMENT ========== */
+const chat = document.getElementById("chat");
+const msg = document.getElementById("msg");
+const send = document.getElementById("send");
+
+/* ========== UI ========== */
+function addBubble(text, type) {
+  const row = document.createElement("div");
+  row.className = "row " + type + "-row";
+
+  const bubble = document.createElement("div");
+  bubble.className = "bubble " + type;
+  bubble.textContent = text;
+
+  row.appendChild(bubble);
+  chat.appendChild(row);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+/* ========== SIGNALING ========== */
+const SIGNALING_HOST = "p2p-chat-production-3693.up.railway.app";
+const WS_URL = location.protocol === "https:" ? "wss://" + SIGNALING_HOST : "ws://" + SIGNALING_HOST;
+
+addBubble("Menghubungkan ke server…", "system");
+
+const ws = new WebSocket(WS_URL);
+const peers = {};
+
+ws.onopen = () => {
+  addBubble("Server terhubung", "system");
+  ws.send(JSON.stringify({ type: "register", id: myId }));
+};
+
+ws.onmessage = e => {
+  const data = JSON.parse(e.data);
+
+  if (data.type === "peers") {
+    data.peers.forEach(pid => {
+      if (pid !== myId && !peers[pid]) createPeer(pid);
+    });
+    return;
+  }
+
+  if (data.signal) {
+    if (!peers[data.from]) createPeer(data.from);
+    peers[data.from].signal(data.signal);
+  }
+};
+
+/* ========== PEER ========== */
+function createPeer(pid) {
+  addBubble("Menghubungkan ke " + pid, "system");
+
+  const peer = new SimplePeer({
+    initiator: myId < pid,
+    trickle: false
+  });
+
+  peers[pid] = peer;
+
+  peer.on("signal", s => {
+    ws.send(JSON.stringify({ from: myId, to: pid, signal: s }));
+  });
+
+  peer.on("connect", () => {
+    peer.ready = true;               // 🔥 FIX UTAMA
+    addBubble("Terhubung dengan " + pid, "system");
+    updateUI();
+  });
+
+  peer.on("data", d => {
+    addBubble(d.toString(), "peer");
+  });
+
+  peer.on("close", () => {
+    addBubble("Terputus dari " + pid, "system");
+    delete peers[pid];
+    updateUI();
+  });
+}
+
+/* ========== SEND ========== */
+send.onclick = () => {
+  const text = msg.value.trim();
+  if (!text) return;
+
+  let sent = 0;
+  Object.values(peers).forEach(p => {
+    if (p.ready) {
+      p.send(text);
+      sent++;
+    }
+  });
+
+  if (sent) addBubble(text, "me");
+  msg.value = "";
+};
+
+/* ========== UI STATE ========== */
+function updateUI() {
+  const ready = Object.values(peers).some(p => p.ready);
+  msg.disabled = !ready;
+  send.disabled = !ready;
+}
+</script>
+
+</body>
+</html>
