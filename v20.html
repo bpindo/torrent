@@ -3,99 +3,122 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mini WebTorrent P2P</title>
+<title>Mini WebTorrent Hybrid Peer</title>
+
 <script src="https://cdn.jsdelivr.net/npm/webtorrent@0.115.0/webtorrent.min.js"></script>
 
 <style>
+body {
+  font-family: system-ui, Arial, sans-serif;
+  text-align: center;
+  padding: 15px;
+}
+input, button {
+  width: 100%;
+  max-width: 440px;
+  margin: 6px auto;
+  padding: 8px;
+  box-sizing: border-box;
+}
+video, audio {
+  width: 100%;
+  max-width: 440px;
+  margin-top: 10px;
+}
+.file {
+  border-top: 1px solid #ddd;
+  margin-top: 10px;
+  padding-top: 10px;
+}
 </style>
 </head>
 <body>
-<center>
-<h2>Mini WebTorrent P2P Stabil</h2>
 
-<!-- SEEDING -->
+<h3>Mini WebTorrent Hybrid Peer</h3>
+
+<!-- SEED / UPLOAD -->
 <input type="file" id="fileInput" multiple>
 <p id="seedInfo"></p>
-<button id="copyMagnetBtn">Copy Magnet</button>
 
-<!-- DOWNLOAD -->
-<input type="text" id="magnetInput" placeholder="Masukkan magnet / hash" size="60">
-<button id="downloadBtn" disabled>Download</button>
-<p id="downloadInfo"></p>
-<p id="peerInfo"></p>
-</center>
+<hr>
+
+<!-- JOIN SWARM -->
+<input type="text" id="magnetInput" placeholder="Magnet / Info-hash WebTorrent">
+<button id="joinBtn" disabled>Join Swarm</button>
+
+<div id="viewer"></div>
+<div id="downloads"></div>
+
 <script>
 const client = new WebTorrent();
+const $ = id => document.getElementById(id);
 let currentTorrent = null;
-let downloadTorrent = null;
 
-function info(id, text) {
-  document.getElementById(id).textContent = text;
-}
-
-// ================== SEED FILE (MULTI) ==================
-document.getElementById('fileInput').addEventListener('change', e => {
-  const files = Array.from(e.target.files);
+/* ========== SEED ========== */
+$('fileInput').addEventListener('change', e => {
+  const files = [...e.target.files];
   if (!files.length) return;
 
   if (currentTorrent) currentTorrent.destroy();
 
   client.seed(files, torrent => {
     currentTorrent = torrent;
-    info('seedInfo', `🌱 Seeding ${files.length} file aktif!`);
-    console.log('Magnet link:', torrent.magnetURI);
+    $('seedInfo').textContent = `Seeding ${files.length} file`;
+    $('magnetInput').value = torrent.magnetURI;
+    $('joinBtn').disabled = false;
   });
 });
 
-// ================== COPY MAGNET ==================
-document.getElementById('copyMagnetBtn').addEventListener('click', () => {
-  if (!currentTorrent) {
-    info('seedInfo', 'Belum ada torrent yang diseed');
-    return;
-  }
-  navigator.clipboard.writeText(currentTorrent.magnetURI);
-  info('seedInfo', '🌱 Magnet link disalin ke clipboard');
-});
+/* ENABLE JOIN */
+$('magnetInput').oninput = () => {
+  $('joinBtn').disabled = !$('magnetInput').value.trim();
+};
 
-// ================== DOWNLOAD ==================
-document.getElementById('downloadBtn').addEventListener('click', () => {
-  const magnet = document.getElementById('magnetInput').value.trim();
-  if (!magnet) return alert('Masukkan magnet / hash dulu!');
+/* ========== JOIN / STREAM / DOWNLOAD ========== */
+$('joinBtn').onclick = () => {
+  const magnet = $('magnetInput').value.trim();
+  if (!magnet) return;
 
-  downloadTorrent = client.add(magnet, torrent => {
-    info('downloadInfo', '⬇️ Download dimulai...');
+  client.add(magnet, torrent => {
 
-    torrent.on('download', () => {
-      const percent = ((torrent.downloaded / torrent.length) * 100).toFixed(2);
-      info('downloadInfo', `⬇️ Download: ${percent}%`);
-      info('peerInfo', `Peers: ${torrent.numPeers}`);
-    });
+    torrent.files.forEach(file => {
+      const box = document.createElement('div');
+      box.className = 'file';
 
-    torrent.on('done', () => {
-      info('downloadInfo', 'Download selesai!');
-      torrent.files.forEach(file => {
-        file.getBlob((err, blob) => {
-          if (!err) {
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = file.name;
-            a.click();
-          }
+      // STREAMING (HEMAT RAM)
+      if (file.name.match(/\.(mp4|webm|mp3)$/i)) {
+        const media = document.createElement(
+          file.name.match(/mp3$/) ? 'audio' : 'video'
+        );
+        media.controls = true;
+        file.appendTo(media);
+        box.appendChild(media);
+      }
+
+      // DOWNLOAD MANUAL
+      const btn = document.createElement('button');
+      btn.textContent = `Download ${file.name}`;
+
+      btn.onclick = () => {
+        btn.textContent = 'Menyiapkan file...';
+        file.getBlob((_, blob) => {
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = file.name;
+          a.click();
+          btn.textContent = 'Download ulang';
         });
-      });
+      };
+
+      box.appendChild(btn);
+      downloads.appendChild(box);
     });
+
   });
-});
+};
 
-// ================== ENABLE DOWNLOAD ==================
-document.getElementById('magnetInput').addEventListener('input', () => {
-  document.getElementById('downloadBtn').disabled =
-    !document.getElementById('magnetInput').value.trim();
-});
-
-client.on('error', err => console.error('WebTorrent Error:', err));
+client.on('error', console.error);
 </script>
-
 
 </body>
 </html>
