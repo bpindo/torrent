@@ -1,94 +1,144 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<title>Realtime Log P2P (A-B-C)</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Simple-Peer P2P Chat Example</title>
 <style>
-body { font-family: monospace; background:#111; color:#0f0; padding:15px }
-textarea { width:100%; background:#000; color:#0f0; border:1px solid #0f0 }
-button { margin:5px 0; padding:6px 12px }
-pre { background:#000; padding:10px; height:250px; overflow:auto }
-.box { border:1px solid #0f0; padding:10px; margin-bottom:10px }
+  body {
+    font-family: monospace;
+    background: #111;
+    color: #0f0;
+    padding: 15px;
+  }
+  textarea, input, button {
+    width: 100%;
+    font-family: monospace;
+    background: #000;
+    color: #0f0;
+    border: 1px solid #0f0;
+    margin: 8px 0;
+    padding: 8px;
+    box-sizing: border-box;
+  }
+  button {
+    cursor: pointer;
+  }
+  pre {
+    background: #000;
+    padding: 10px;
+    height: 200px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+  }
+  .btn-row {
+    display: flex;
+    gap: 8px;
+  }
+  .btn-row button {
+    flex: 1;
+  }
 </style>
 </head>
 <body>
 
-<h2>🌐 Realtime Log Viewer (A / B / C / dst)</h2>
+<h2>🌐 Simple-Peer Manual Signaling Chat</h2>
 
-<div class="box">
-<b>1️⃣ Mode</b><br>
-<button onclick="start(true)">Start sebagai Initiator (A)</button>
-<button onclick="start(false)">Start sebagai Receiver (B/C)</button>
+<div>
+  <strong>1️⃣ Pilih Mode</strong><br/>
+  <div class="btn-row">
+    <button onclick="start(true)">Start sebagai Initiator (A)</button>
+    <button onclick="start(false)">Start sebagai Receiver (B/C)</button>
+  </div>
 </div>
 
-<div class="box">
-<b>2️⃣ Signaling</b>
-<textarea id="signal" placeholder="Copy / Paste signal di sini"></textarea>
-<button onclick="applySignal()">Apply Signal</button>
+<div>
+  <strong>2️⃣ Tukar Signaling</strong><br/>
+  <textarea id="signal" rows="8" placeholder="Copy/Paste signaling JSON disini..."></textarea>
+  <button onclick="applySignal()">Apply Signal</button>
 </div>
 
-<div class="box">
-<b>3️⃣ Kirim Log</b>
-<textarea id="logInput" placeholder="Tulis log..."></textarea>
-<button onclick="sendLog()">Kirim</button>
+<div>
+  <strong>3️⃣ Kirim Pesan</strong><br/>
+  <input type="text" id="messageInput" placeholder="Tulis pesan di sini..." />
+  <button onclick="sendMessage()">Kirim Pesan</button>
 </div>
 
-<div class="box">
-<b>📡 Log Realtime</b>
-<pre id="logs"></pre>
+<div>
+  <strong>📡 Log Pesan & Sistem</strong>
+  <pre id="log"></pre>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/simple-peer@9/simplepeer.min.js"></script>
 <script>
-let peer
+  let peer = null;
 
-function start(initiator) {
-  peer = new SimplePeer({
-    initiator,
-    trickle: false
-  })
+  function log(msg) {
+    const logEl = document.getElementById('log');
+    logEl.textContent += msg + "\n";
+    logEl.scrollTop = logEl.scrollHeight;
+  }
 
-  peer.on('signal', data => {
-    document.getElementById('signal').value =
-      JSON.stringify(data, null, 2)
-  })
+  function start(initiator) {
+    if (peer) {
+      peer.destroy();
+      peer = null;
+      log('### Peer sebelumnya dihancurkan');
+    }
+    peer = new SimplePeer({ initiator, trickle: false });
 
-  peer.on('connect', () => {
-    logSys("✅ CONNECTED")
-  })
+    peer.on('signal', data => {
+      document.getElementById('signal').value = JSON.stringify(data, null, 2);
+      log(`### Signal dibuat (salin & kirim ke peer lain)`);
+    });
 
-  peer.on('data', data => {
-    const msg = JSON.parse(data)
-    log(`[${msg.time}] ${msg.from}: ${msg.text}`)
-  })
+    peer.on('connect', () => {
+      log('✅ CONNECTED - Sekarang bisa kirim pesan');
+    });
 
-  logSys("⏳ Peer dibuat (" + (initiator ? "Initiator" : "Receiver") + ")")
-}
+    peer.on('data', data => {
+      const msg = data.toString();
+      log(`👤 Peer: ${msg}`);
+    });
 
-function applySignal() {
-  peer.signal(JSON.parse(document.getElementById('signal').value))
-}
+    peer.on('error', err => {
+      log('❌ Error: ' + err);
+    });
 
-function sendLog() {
-  if (!peer || !peer.connected) return
-  const text = document.getElementById('logInput').value
-  peer.send(JSON.stringify({
-    from: "User",
-    time: new Date().toLocaleTimeString(),
-    text
-  }))
-  document.getElementById('logInput').value = ""
-}
+    peer.on('close', () => {
+      log('⚠️ Koneksi ditutup');
+    });
 
-function log(msg) {
-  const el = document.getElementById('logs')
-  el.textContent += msg + "\n"
-  el.scrollTop = el.scrollHeight
-}
+    log(`⏳ Peer dibuat sebagai ${initiator ? 'Initiator' : 'Receiver'}`);
+  }
 
-function logSys(msg) {
-  log("### " + msg)
-}
+  function applySignal() {
+    if (!peer) {
+      alert('Mulai peer dulu dengan pilih mode di atas!');
+      return;
+    }
+    try {
+      const signalData = JSON.parse(document.getElementById('signal').value);
+      peer.signal(signalData);
+      log('### Signal diterapkan');
+    } catch(e) {
+      alert('JSON signaling tidak valid!');
+      log('❌ Gagal parse signaling JSON');
+    }
+  }
+
+  function sendMessage() {
+    const input = document.getElementById('messageInput');
+    if (!peer || !peer.connected) {
+      alert('Peer belum terkoneksi!');
+      return;
+    }
+    const msg = input.value.trim();
+    if (!msg) return;
+    peer.send(msg);
+    log(`🗨️ Kamu: ${msg}`);
+    input.value = '';
+  }
 </script>
 
 </body>
