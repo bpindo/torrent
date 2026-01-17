@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WebTorrent P2P Share (No Telegram)</title>
+
+<script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+
+<style>
+body {
+  font-family: monospace;
+  background: #111;
+  color: #0f0;
+  padding: 15px;
+}
+input, button {
+  background: #000;
+  color: #0f0;
+  border: 1px solid #0f0;
+  padding: 6px;
+}
+.hidden { display:none }
+</style>
+</head>
+<body>
+
+<h2>📤 WebTorrent P2P Share</h2>
+
+<p>Berbagi file langsung browser ke browser (tanpa server).</p>
+
+<input type="file" id="fileInput" />
+<br><br>
+
+<input type="text" id="magnet" placeholder="Magnet / hash BTIH" size="60">
+<br><br>
+
+<button onclick="copyHash()">📋 Copy Hash</button>
+<button onclick="download()">⬇️ Download</button>
+
+<p id="info">ℹ️ Idle</p>
+
+<script>
+const client = new WebTorrent();
+let currentTorrent = null;
+
+function extractHash(input) {
+  const m = input.match(/btih:([a-f0-9]{40})/i);
+  if (m) return m[1];
+  if (/^[a-f0-9]{40}$/i.test(input)) return input;
+  return null;
+}
+
+function copyHash() {
+  const hash = extractHash(document.getElementById("magnet").value);
+  if (!hash) return alert("Hash belum ada");
+  navigator.clipboard.writeText(hash);
+  info("📋 Hash disalin");
+}
+
+function info(text) {
+  document.getElementById("info").textContent = text;
+}
+
+document.getElementById("fileInput").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  if (currentTorrent) currentTorrent.destroy();
+
+  client.seed(file, torrent => {
+    currentTorrent = torrent;
+    const hash = torrent.infoHash;
+    document.getElementById("magnet").value =
+      `magnet:?xt=urn:btih:${hash}`;
+    info("🌱 Seeding aktif, bagikan hash");
+  });
+});
+
+function download() {
+  const hash = extractHash(document.getElementById("magnet").value);
+  if (!hash) return alert("Hash tidak valid");
+
+  const magnet = `magnet:?xt=urn:btih:${hash}`;
+  client.add(magnet, torrent => {
+    currentTorrent = torrent;
+    info("⬇️ Download dimulai");
+
+    torrent.on("done", () => {
+      info("✅ Download selesai");
+      torrent.files.forEach(file => {
+        file.getBlob((err, blob) => {
+          if (!err) {
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = file.name;
+            a.click();
+          }
+        });
+      });
+    });
+  });
+}
+</script>
+
+</body>
+</html>
