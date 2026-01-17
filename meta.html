@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Hive File Proof Tool</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdn.jsdelivr.net/npm/@hiveio/hive-js/dist/hive.min.js"></script>
+
+<style>
+body { font-family: Arial, sans-serif; max-width: 900px; margin: auto; padding: 15px; }
+textarea, input { width: 100%; margin: 6px 0; padding: 8px; }
+button { padding: 10px 14px; margin-top: 8px; }
+pre { background: #111; color: #0f0; padding: 10px; overflow-x: auto; }
+</style>
+</head>
+
+<body>
+
+<h2>📄 Hive File Proof (Hash + Metadata)</h2>
+
+<h3>1️⃣ Pilih File (Lokal)</h3>
+<input type="file" id="fileInput">
+
+<pre id="hashLog">Menunggu file...</pre>
+
+<h3>2️⃣ Metadata JSON</h3>
+<textarea id="metadata" rows="10" placeholder="Metadata JSON akan muncul di sini"></textarea>
+
+<hr>
+
+<h3>3️⃣ Post ke Hive (Comment)</h3>
+
+<label>Private Posting Key</label>
+<input type="password" id="wif" placeholder="5J...">
+
+<label>Hive Username</label>
+<input type="text" id="author" placeholder="username">
+
+<label>Parent Post URL</label>
+<input type="text" id="parent" placeholder="https://hive.blog/@author/permlink">
+
+<button onclick="postProof()">🚀 Post Proof Comment</button>
+
+<script>
+hive.api.setOptions({ url: 'https://api.hive.blog' });
+
+/* ==========================
+   FILE → SHA256
+========================== */
+document.getElementById("fileInput").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const buffer = await file.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+
+  const metadata = {
+    type: "hive-file-proof",
+    filename: file.name,
+    size_bytes: file.size,
+    mime: file.type || "unknown",
+    sha256: hashHex,
+    created_at: new Date().toISOString(),
+    note: "Proof of existence via Hive"
+  };
+
+  document.getElementById("hashLog").textContent =
+    "SHA-256:\n" + hashHex;
+
+  document.getElementById("metadata").value =
+    JSON.stringify(metadata, null, 2);
+});
+
+/* ==========================
+   POST COMMENT HIVE
+========================== */
+function postProof() {
+  const wif = document.getElementById("wif").value.trim();
+  const author = document.getElementById("author").value.trim();
+  const parentUrl = document.getElementById("parent").value.trim();
+  const metadataText = document.getElementById("metadata").value.trim();
+
+  if (!wif || !author || !parentUrl || !metadataText) {
+    alert("Lengkapi semua field.");
+    return;
+  }
+
+  const match = parentUrl.match(/^https:\/\/hive.blog\/@([\w.-]+)\/([\w-]+)$/);
+  if (!match) {
+    alert("Format Parent URL salah.");
+    return;
+  }
+
+  const parentAuthor = match[1];
+  const parentPermlink = match[2];
+  const permlink = "file-proof-" + Date.now();
+
+  const body =
+`### 📎 File Proof Submitted
+
+\`\`\`json
+${metadataText}
+\`\`\`
+
+🔒 File tidak disimpan di Hive.
+🧾 Hash ini adalah bukti keaslian file.
+`;
+
+  hive.broadcast.comment(
+    wif,
+    parentAuthor,
+    parentPermlink,
+    author,
+    permlink,
+    "",
+    body,
+    JSON.stringify({ app: "hive-file-proof/0.1" }),
+    (err, result) => {
+      if (err) {
+        alert("Error: " + err.message);
+        console.error(err);
+      } else {
+        alert("✅ Proof berhasil dipost ke Hive");
+        console.log(result);
+      }
+    }
+  );
+}
+</script>
+
+</body>
+</html>
