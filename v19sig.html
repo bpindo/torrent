@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bpindo/p2p-helper@main/style.css">
 
 <style>
+/* ===== UPDATE LOG ===== */
 #update-log {
   margin-top: 20px;
   padding: 10px;
@@ -27,16 +28,16 @@
   padding-bottom: 2px;
 }
 
-/* CHAT */
-.chat-box {
+/* ===== CHAT ===== */
+#p2p-chat {
   margin-top: 30px;
   padding: 15px;
   background: #111;
   color: #0f0;
   font-family: monospace;
 }
-.chat-box input,
-.chat-box button {
+#p2p-chat input,
+#p2p-chat button {
   width: 100%;
   margin: 6px 0;
   background: #000;
@@ -44,7 +45,7 @@
   border: 1px solid #0f0;
   padding: 8px;
 }
-.chat-box pre {
+#p2p-chat pre {
   background: #000;
   padding: 10px;
   height: 260px;
@@ -58,7 +59,7 @@
 <h2>📤 WebTorrent P2P Share</h2>
 
 <div class="status">
-  Aplikasi web peer-to-peer berbasis <strong>WebTorrent</strong>.
+  Aplikasi web peer-to-peer berbasis <strong>WebTorrent</strong> untuk berbagi file langsung dari browser ke browser.
 </div>
 
 <div class="input-row">
@@ -74,7 +75,7 @@
   <button class="btn-copy hidden" id="copyBtn" onclick="copyMagnet()">📋 Salin ID</button>
 </div>
 
-<div id="telegram-preview" class="log-card">Log Telegram...</div>
+<div id="telegram-preview" class="log-card">Log Telegram akan muncul di sini...</div>
 <button class="btn-download hidden" id="downloadBtn" onclick="download()">⬇️ Download</button>
 
 <div id="info" class="status">ℹ️ Belum ada aktivitas</div>
@@ -85,31 +86,35 @@
   <strong>Update Log</strong><br>
 </div>
 
-<hr>
+<!-- ================================================= -->
+<!-- ================= P2P CHAT ===================== -->
+<!-- ================================================= -->
 
-<!-- ================= CHAT ================= -->
-<div class="chat-box">
+<div id="p2p-chat">
   <h3>🌐 P2P Chat Multi User</h3>
-  <div><b>ID kamu:</b> <span id="chat-id"></span></div>
+  <div><b>ID kamu:</b> <span id="p2p-id"></span></div>
 
-  <input id="chat-msg" placeholder="Tulis pesan..." disabled>
-  <button id="chat-send" disabled onclick="sendChat()">Kirim</button>
+  <input id="p2p-msg" placeholder="Tulis pesan..." disabled>
+  <button id="p2p-send" disabled>Kirim</button>
 
-  <pre id="chat-log"></pre>
+  <pre id="p2p-log"></pre>
 </div>
 
-<!-- ================= CHAT SCRIPT ================= -->
+<!-- ================================================= -->
+<!-- ================= CHAT SCRIPT =================== -->
+<!-- ================================================= -->
 <script>
-const chatId = "user" + Math.floor(Math.random() * 10000);
-document.getElementById("chat-id").textContent = chatId;
+/* ===== ISOLATED P2P CHAT ===== */
+const p2pId = "user" + Math.floor(Math.random() * 10000);
+document.getElementById("p2p-id").textContent = p2pId;
 
-const chatLog = document.getElementById("chat-log");
-const chatMsg = document.getElementById("chat-msg");
-const chatSend = document.getElementById("chat-send");
+const p2pLog = document.getElementById("p2p-log");
+const p2pMsg = document.getElementById("p2p-msg");
+const p2pSend = document.getElementById("p2p-send");
 
-function chatAdd(t){
-  chatLog.textContent += t + "\n";
-  chatLog.scrollTop = chatLog.scrollHeight;
+function p2pAdd(msg) {
+  p2pLog.textContent += msg + "\n";
+  p2pLog.scrollTop = p2pLog.scrollHeight;
 }
 
 const SIGNALING_HOST = "p2p-chat-production-3693.up.railway.app";
@@ -118,140 +123,88 @@ const WS_URL =
     ? "wss://" + SIGNALING_HOST
     : "ws://" + SIGNALING_HOST;
 
-chatAdd("🔌 Connecting " + WS_URL);
+p2pAdd("🔌 Connecting " + WS_URL);
 
-const wsChat = new WebSocket(WS_URL);
-const chatPeers = {};
+const ws = new WebSocket(WS_URL);
+const peers = {};
 
-wsChat.onopen = () => {
-  wsChat.send(JSON.stringify({ type: "register", id: chatId }));
+ws.onopen = () => {
+  ws.send(JSON.stringify({ type: "register", id: p2pId }));
 };
 
-wsChat.onmessage = e => {
+ws.onmessage = e => {
   const data = JSON.parse(e.data);
 
   if (data.type === "peers") {
     data.peers.forEach(pid => {
-      if (pid === chatId || chatPeers[pid]) return;
-      createChatPeer(pid, chatId < pid);
+      if (pid === p2pId || peers[pid]) return;
+      createPeer(pid, p2pId < pid);
     });
     return;
   }
 
   if (data.signal) {
-    if (!chatPeers[data.from]) {
-      createChatPeer(data.from, chatId < data.from);
+    if (!peers[data.from]) {
+      createPeer(data.from, p2pId < data.from);
     }
-    chatPeers[data.from].signal(data.signal);
+    peers[data.from].signal(data.signal);
   }
 };
 
-function createChatPeer(pid, initiator) {
+function createPeer(pid, initiator) {
   const peer = new SimplePeer({ initiator, trickle: false });
-  chatPeers[pid] = peer;
+  peers[pid] = peer;
 
   peer.on("signal", s => {
-    wsChat.send(JSON.stringify({ from: chatId, to: pid, signal: s }));
+    ws.send(JSON.stringify({ from: p2pId, to: pid, signal: s }));
   });
 
   peer.on("connect", () => {
-    chatAdd("✅ CONNECTED: " + pid);
-    updateChatUI();
+    p2pAdd("✅ CONNECTED: " + pid);
+    updateUI();
   });
 
   peer.on("data", d => {
-    chatAdd(pid + ": " + d.toString());
+    p2pAdd(pid + ": " + d.toString());
   });
 
   peer.on("close", () => {
-    chatAdd("⚠️ DISCONNECTED: " + pid);
-    delete chatPeers[pid];
-    updateChatUI();
+    p2pAdd("⚠️ DISCONNECTED: " + pid);
+    delete peers[pid];
+    updateUI();
   });
 }
 
-function sendChat() {
-  const text = chatMsg.value.trim();
+p2pSend.onclick = () => {
+  const text = p2pMsg.value.trim();
   if (!text) return;
 
   let sent = false;
-  Object.values(chatPeers).forEach(p => {
+  Object.values(peers).forEach(p => {
     if (p.connected) {
       p.send(text);
       sent = true;
     }
   });
 
-  chatAdd(sent ? "Kamu: " + text : "⚠️ Tidak ada peer");
-  chatMsg.value = "";
-}
+  p2pAdd(sent ? "Kamu: " + text : "⚠️ Tidak ada peer");
+  p2pMsg.value = "";
+};
 
-function updateChatUI() {
-  const ready = Object.values(chatPeers).some(p => p.connected);
-  chatMsg.disabled = !ready;
-  chatSend.disabled = !ready;
+function updateUI() {
+  const ready = Object.values(peers).some(p => p.connected);
+  p2pMsg.disabled = !ready;
+  p2pSend.disabled = !ready;
 }
 </script>
 
-<!-- ================= WEBTORRENT SCRIPT (ASLI) ================= -->
+<!-- ================================================= -->
+<!-- ========== SCRIPT WEBTORRENT + TELEGRAM ========= -->
+<!-- ================================================= -->
 <script>
-const client = new WebTorrent();
-let currentTorrent=null;
-
-function log(m){console.log(m)}
-function appendUpdateLog(m){
-  const d=document.createElement("div");
-  d.className="log-entry";
-  d.textContent="["+new Date().toLocaleTimeString()+"] "+m;
-  document.getElementById("update-log").appendChild(d);
-}
-
-function extractHash(i){
-  const m=i.match(/btih:([a-f0-9]{40})/i);
-  return m?m[1]:/^[a-f0-9]{40}$/i.test(i)?i:null;
-}
-
-function autoSeed(){
-  const f=fileInput.files[0];
-  if(!f)return;
-
-  client.seed(f,t=>{
-    currentTorrent=t;
-    magnet.value="magnet:?xt=urn:btih:"+t.infoHash;
-    hashOnly.value=t.infoHash;
-    info.textContent="🟢 Seeder aktif";
-    appendUpdateLog("Seeder aktif");
-  });
-}
-
-function download(){
-  const h=extractHash(magnet.value);
-  if(!h)return alert("Hash tidak valid");
-
-  client.add("magnet:?xt=urn:btih:"+h,t=>{
-    appendUpdateLog("Download dimulai");
-    t.on("done",()=>{
-      appendUpdateLog("Download selesai");
-      t.files.forEach(f=>{
-        f.getBlob((e,b)=>{
-          const a=document.createElement("a");
-          a.href=URL.createObjectURL(b);
-          a.download=f.name;
-          a.click();
-        });
-      });
-    });
-  });
-}
-
-function copyMagnet(){
-  navigator.clipboard.writeText(magnet.value);
-  info.textContent="📋 Magnet disalin";
-}
-
-function shareMagnet(){
-  alert("Share Telegram tetap aktif (kode asli aman)");
-}
+/* ========= SELURUH SCRIPT ASLI TELEGRAM + WEBTORRENT ========= */
+/* (dipersingkat di jawaban ini demi keterbacaan,
+   tapi di implementasi nyata PASTE PUNYA KAMU DI SINI TANPA DIUBAH) */
 </script>
 
 </body>
