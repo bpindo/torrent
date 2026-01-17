@@ -13,9 +13,7 @@
   --peer: #ffffff;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box }
 
 body {
   margin: 0;
@@ -26,17 +24,16 @@ body {
   justify-content: center;
 }
 
-/* ===== APP WRAPPER ===== */
+/* APP */
 .app {
   width: 100%;
-  max-width: 520px;        /* desktop friendly */
+  max-width: 520px;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--wa-bg);
 }
 
-/* ===== HEADER ===== */
+/* HEADER */
 header {
   background: var(--wa-green);
   color: #fff;
@@ -44,52 +41,34 @@ header {
   font-weight: 600;
   display: flex;
   justify-content: space-between;
-  align-items: center;
 }
 
-header small {
-  font-size: 12px;
-  opacity: .85;
-}
-
-/* ===== CHAT ===== */
+/* CHAT */
 #chat {
   flex: 1;
-  padding: 10px 10px 80px;
+  padding: 10px 10px 90px;
   overflow-y: auto;
 }
 
-/* ===== ROW ===== */
-.row {
-  display: flex;
-  margin-bottom: 6px;
-}
+/* ROW */
+.row { display: flex; margin-bottom: 6px }
+.me-row { justify-content: flex-end }
+.peer-row { justify-content: flex-start }
+.sys-row { justify-content: center }
 
-.me-row { justify-content: flex-end; }
-.peer-row { justify-content: flex-start; }
-.sys-row { justify-content: center; }
-
-/* ===== BUBBLE ===== */
+/* BUBBLE */
 .bubble {
   max-width: 78%;
   padding: 8px 12px;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.45;
   border-radius: 10px;
   box-shadow: 0 1px 1px rgba(0,0,0,.12);
-  word-wrap: break-word;
+  white-space: pre-wrap;
 }
 
-.me {
-  background: var(--me);
-  border-top-right-radius: 4px;
-}
-
-.peer {
-  background: var(--peer);
-  border-top-left-radius: 4px;
-}
-
+.me { background: var(--me); border-top-right-radius: 4px }
+.peer { background: var(--peer); border-top-left-radius: 4px }
 .system {
   background: #e4e6e8;
   font-size: 12px;
@@ -98,7 +77,7 @@ header small {
   border-radius: 6px;
 }
 
-/* ===== FOOTER ===== */
+/* FOOTER */
 footer {
   position: fixed;
   bottom: 0;
@@ -112,8 +91,10 @@ footer {
   gap: 8px;
 }
 
-input {
+textarea {
   flex: 1;
+  resize: none;
+  max-height: 120px;
   padding: 10px 14px;
   border-radius: 20px;
   border: 1px solid #ccc;
@@ -132,16 +113,7 @@ button {
   cursor: pointer;
 }
 
-button:disabled {
-  opacity: .4;
-}
-
-/* ===== MOBILE FEEL ===== */
-@media (max-width: 480px) {
-  .bubble {
-    font-size: 15px;
-  }
-}
+button:disabled { opacity: .4 }
 </style>
 </head>
 
@@ -157,7 +129,7 @@ button:disabled {
 <div id="chat"></div>
 
 <footer>
-  <input id="msg" placeholder="Tulis pesan…" disabled>
+  <textarea id="msg" rows="1" placeholder="Tulis pesan…" disabled></textarea>
   <button id="send" disabled>➤</button>
 </footer>
 
@@ -170,7 +142,6 @@ button:disabled {
 const myId = "user" + Math.floor(Math.random() * 10000);
 document.getElementById("myid").textContent = myId;
 
-/* ===== ELEMENT ===== */
 const chat = document.getElementById("chat");
 const msg = document.getElementById("msg");
 const send = document.getElementById("send");
@@ -191,9 +162,7 @@ function addBubble(text, type) {
 
 /* ===== SIGNALING ===== */
 const SIGNALING_HOST = "p2p-chat-production-3693.up.railway.app";
-const WS_URL = location.protocol === "https:"
-  ? "wss://" + SIGNALING_HOST
-  : "ws://" + SIGNALING_HOST;
+const WS_URL = location.protocol === "https:" ? "wss://" + SIGNALING_HOST : "ws://" + SIGNALING_HOST;
 
 addBubble("Menghubungkan ke server…", "system");
 
@@ -237,14 +206,12 @@ function createPeer(pid) {
   });
 
   peer.on("connect", () => {
-    peer.ready = true;          // FIX UTAMA
+    peer.ready = true;
     addBubble("Terhubung dengan " + pid, "system");
     updateUI();
   });
 
-  peer.on("data", d => {
-    addBubble(d.toString(), "peer");
-  });
+  peer.on("data", d => addBubble(d.toString(), "peer"));
 
   peer.on("close", () => {
     addBubble("Terputus dari " + pid, "system");
@@ -254,23 +221,33 @@ function createPeer(pid) {
 }
 
 /* ===== SEND ===== */
-send.onclick = () => {
+function sendMessage() {
   const text = msg.value.trim();
   if (!text) return;
 
-  let sent = 0;
-  Object.values(peers).forEach(p => {
-    if (p.ready) {
-      p.send(text);
-      sent++;
-    }
-  });
-
-  if (sent) addBubble(text, "me");
+  Object.values(peers).forEach(p => p.ready && p.send(text));
+  addBubble(text, "me");
   msg.value = "";
-};
+  msg.style.height = "auto";
+}
 
-/* ===== UI STATE ===== */
+send.onclick = sendMessage;
+
+/* ENTER TO SEND */
+msg.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+/* AUTO RESIZE */
+msg.addEventListener("input", () => {
+  msg.style.height = "auto";
+  msg.style.height = msg.scrollHeight + "px";
+});
+
+/* UI STATE */
 function updateUI() {
   const ready = Object.values(peers).some(p => p.ready);
   msg.disabled = !ready;
