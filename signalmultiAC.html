@@ -3,110 +3,151 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Auto Mesh P2P WebRTC (No Server)</title>
-
+<title>Simple-Peer Manual Signaling (Auto Initiator)</title>
 <style>
-body { font-family: monospace; background:#111; color:#0f0; padding:15px }
-textarea, input, button {
-  width:100%; background:#000; color:#0f0;
-  border:1px solid #0f0; padding:8px; margin:6px 0
-}
-pre { background:#000; padding:10px; height:220px; overflow:auto }
+  body { font-family: monospace; background:#111; color:#0f0; padding:15px; }
+  textarea, input, button {
+    width:100%; background:#000; color:#0f0;
+    border:1px solid #0f0; margin:8px 0; padding:8px;
+    box-sizing:border-box; font-family: monospace;
+  }
+  button { cursor:pointer; }
+  pre {
+    background:#000; padding:10px; height:200px;
+    overflow-y:auto; white-space:pre-wrap;
+  }
+  .peer-section {
+    border:1px solid #0f0; padding:10px; margin-bottom:12px;
+  }
+  .row {
+    display:flex; gap:6px;
+  }
 </style>
 </head>
 <body>
 
-<h3>🌐 Auto-Mesh P2P (Manual Seed → Auto Connect)</h3>
-<div><b>ID:</b> <span id="id"></span></div>
+<h2>🌐 Manual Signaling (Auto Initiator)</h2>
 
-<input id="peerId" placeholder="Peer ID tujuan (seed)" />
-<button onclick="connectSeed()">Connect ke Seed</button>
+<div><strong>ID Kamu:</strong> <span id="myId"></span></div>
 
-<textarea id="signalBox" placeholder="Paste signaling pertama di sini"></textarea>
-<button onclick="applySignal()">Apply Signal</button>
+<div class="peer-section">
+  <strong>1️⃣ Buat Offer</strong><br/>
+  <button onclick="createOffer()">Buat Offer (Initiator)</button>
+</div>
 
-<input id="msg" placeholder="Pesan broadcast" />
-<button onclick="broadcast()">Kirim</button>
+<div class="peer-section">
+  <strong>2️⃣ Signaling</strong><br/>
+  <textarea id="signalBox" rows="6" placeholder="Offer / Answer akan muncul di sini atau paste dari peer"></textarea>
+  <div class="row">
+    <button onclick="applySignal()">Apply Signaling</button>
+    <button onclick="copySignal()">Copy</button>
+  </div>
+</div>
 
-<pre id="log"></pre>
+<div class="peer-section">
+  <strong>3️⃣ Kirim Pesan (Broadcast)</strong><br/>
+  <input id="messageInput" placeholder="Tulis pesan di sini..." />
+  <button onclick="broadcastMessage()">Kirim Pesan</button>
+</div>
+
+<div class="peer-section">
+  <strong>📡 Log Sistem</strong><br/>
+  <pre id="log"></pre>
+  <button onclick="copyLog()">Copy Log</button>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/simple-peer@9/simplepeer.min.js"></script>
 <script>
-const myId = "peer" + Math.floor(Math.random()*9999);
-id.textContent = myId;
+const myId = 'anom' + Math.floor(1000 + Math.random() * 9000);
+document.getElementById('myId').textContent = myId;
 
+let peer = null;
 const peers = {};
-const logEl = log;
-const STUN = { iceServers:[{urls:"stun:stun.l.google.com:19302"}] };
+const logEl = document.getElementById('log');
+const signalBox = document.getElementById('signalBox');
 
-function log(t){ logEl.textContent += t+"\n"; logEl.scrollTop=99999 }
-
-function setup(peer, pid){
-  peer.on("signal", s=>{
-    log("SIGNAL → "+pid+"\n"+JSON.stringify({from:myId,to:pid,signal:s},null,2))
-  });
-
-  peer.on("connect", ()=>{
-    log("CONNECTED "+pid);
-    peer.send(JSON.stringify({type:"intro", peers:Object.keys(peers)}));
-  });
-
-  peer.on("data", d=>{
-    const m = JSON.parse(d);
-
-    // 🔁 relay signaling
-    if(m.type==="relay"){
-      if(!peers[m.from]){
-        const p=new SimplePeer({initiator:false,trickle:false,config:STUN});
-        peers[m.from]=p; setup(p,m.from);
-      }
-      peers[m.from].signal(m.signal);
-    }
-
-    // 🤝 intro peer list
-    if(m.type==="intro"){
-      m.peers.forEach(target=>{
-        if(target!==myId && !peers[target]){
-          const p=new SimplePeer({initiator:true,trickle:false,config:STUN});
-          peers[target]=p; setup(p,target);
-          p.on("signal", s=>{
-            peer.send(JSON.stringify({
-              type:"relay", to:target, from:myId, signal:s
-            }));
-          });
-        }
-      });
-    }
-
-    if(m.type==="chat") log(m.from+": "+m.text);
-  });
-
-  peer.on("close",()=>{ delete peers[pid]; log("CLOSE "+pid) });
+function log(msg){
+  logEl.textContent += msg + "\n";
+  logEl.scrollTop = logEl.scrollHeight;
 }
 
-function connectSeed(){
-  const pid=peerId.value.trim(); if(!pid)return;
-  const p=new SimplePeer({initiator:true,trickle:false,config:STUN});
-  peers[pid]=p; setup(p,pid);
+// 1️⃣ Auto initiator
+function createOffer(){
+  if(peer) return alert("Peer sudah dibuat");
+
+  peer = new SimplePeer({ initiator:true, trickle:false });
+  setupPeer(peer, "remote");
+  peers["remote"] = peer;
+
+  log("⏳ Membuat offer...");
 }
 
+function setupPeer(p, peerId){
+  p.on('signal', data=>{
+    const json = JSON.stringify({ from:myId, signal:data }, null, 2);
+    signalBox.value = json;
+    log("📤 Signal siap dikirim");
+  });
+
+  p.on('connect', ()=>{
+    log("✅ Peer terhubung");
+    sendSystemMessage(p, "Halo dari " + myId);
+  });
+
+  p.on('data', data=>{
+    try {
+      const m = JSON.parse(data);
+      log(`👤 ${m.from}: ${m.text}`);
+    } catch {
+      log("👤 Data: " + data);
+    }
+  });
+
+  p.on('error', err=>log("❌ Error: " + err));
+  p.on('close', ()=>log("⚠️ Peer disconnect"));
+}
+
+// 2️⃣ Apply signaling
 function applySignal(){
-  const o=JSON.parse(signalBox.value);
-  if(!peers[o.from]){
-    const p=new SimplePeer({initiator:false,trickle:false,config:STUN});
-    peers[o.from]=p; setup(p,o.from);
+  let obj;
+  try { obj = JSON.parse(signalBox.value); }
+  catch { return alert("JSON tidak valid"); }
+
+  if(!peer){
+    peer = new SimplePeer({ initiator:false, trickle:false });
+    setupPeer(peer, obj.from || "remote");
   }
-  peers[o.from].signal(o.signal);
-  signalBox.value="";
+
+  peer.signal(obj.signal);
+  log("📥 Signaling diterapkan");
+  signalBox.value = "";
 }
 
-function broadcast(){
-  const text=msg.value; if(!text)return;
-  Object.values(peers).forEach(p=>{
-    if(p.connected) p.send(JSON.stringify({type:"chat",from:myId,text}));
-  });
-  log("ME: "+text); msg.value="";
+// 3️⃣ Broadcast
+function broadcastMessage(){
+  const msg = messageInput.value.trim();
+  if(!msg || !peer || !peer.connected) return;
+
+  peer.send(JSON.stringify({ from:myId, text:msg }));
+  log("🗨️ Kamu: " + msg);
+  messageInput.value = "";
+}
+
+// Utils
+function sendSystemMessage(p, text){
+  p.send(JSON.stringify({ from:myId, text }));
+}
+
+function copySignal(){
+  navigator.clipboard.writeText(signalBox.value);
+  alert("Signaling disalin");
+}
+
+function copyLog(){
+  navigator.clipboard.writeText(logEl.textContent);
+  alert("Log disalin");
 }
 </script>
+
 </body>
 </html>
