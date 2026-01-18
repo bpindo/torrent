@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Auto Mesh P2P WebRTC (No Server)</title>
+
+<style>
+body { font-family: monospace; background:#111; color:#0f0; padding:15px }
+textarea, input, button {
+  width:100%; background:#000; color:#0f0;
+  border:1px solid #0f0; padding:8px; margin:6px 0
+}
+pre { background:#000; padding:10px; height:220px; overflow:auto }
+</style>
+</head>
+<body>
+
+<h3>🌐 Auto-Mesh P2P (Manual Seed → Auto Connect)</h3>
+<div><b>ID:</b> <span id="id"></span></div>
+
+<input id="peerId" placeholder="Peer ID tujuan (seed)" />
+<button onclick="connectSeed()">Connect ke Seed</button>
+
+<textarea id="signalBox" placeholder="Paste signaling pertama di sini"></textarea>
+<button onclick="applySignal()">Apply Signal</button>
+
+<input id="msg" placeholder="Pesan broadcast" />
+<button onclick="broadcast()">Kirim</button>
+
+<pre id="log"></pre>
+
+<script src="https://cdn.jsdelivr.net/npm/simple-peer@9/simplepeer.min.js"></script>
+<script>
+const myId = "peer" + Math.floor(Math.random()*9999);
+id.textContent = myId;
+
+const peers = {};
+const logEl = log;
+const STUN = { iceServers:[{urls:"stun:stun.l.google.com:19302"}] };
+
+function log(t){ logEl.textContent += t+"\n"; logEl.scrollTop=99999 }
+
+function setup(peer, pid){
+  peer.on("signal", s=>{
+    log("SIGNAL → "+pid+"\n"+JSON.stringify({from:myId,to:pid,signal:s},null,2))
+  });
+
+  peer.on("connect", ()=>{
+    log("CONNECTED "+pid);
+    peer.send(JSON.stringify({type:"intro", peers:Object.keys(peers)}));
+  });
+
+  peer.on("data", d=>{
+    const m = JSON.parse(d);
+
+    // 🔁 relay signaling
+    if(m.type==="relay"){
+      if(!peers[m.from]){
+        const p=new SimplePeer({initiator:false,trickle:false,config:STUN});
+        peers[m.from]=p; setup(p,m.from);
+      }
+      peers[m.from].signal(m.signal);
+    }
+
+    // 🤝 intro peer list
+    if(m.type==="intro"){
+      m.peers.forEach(target=>{
+        if(target!==myId && !peers[target]){
+          const p=new SimplePeer({initiator:true,trickle:false,config:STUN});
+          peers[target]=p; setup(p,target);
+          p.on("signal", s=>{
+            peer.send(JSON.stringify({
+              type:"relay", to:target, from:myId, signal:s
+            }));
+          });
+        }
+      });
+    }
+
+    if(m.type==="chat") log(m.from+": "+m.text);
+  });
+
+  peer.on("close",()=>{ delete peers[pid]; log("CLOSE "+pid) });
+}
+
+function connectSeed(){
+  const pid=peerId.value.trim(); if(!pid)return;
+  const p=new SimplePeer({initiator:true,trickle:false,config:STUN});
+  peers[pid]=p; setup(p,pid);
+}
+
+function applySignal(){
+  const o=JSON.parse(signalBox.value);
+  if(!peers[o.from]){
+    const p=new SimplePeer({initiator:false,trickle:false,config:STUN});
+    peers[o.from]=p; setup(p,o.from);
+  }
+  peers[o.from].signal(o.signal);
+  signalBox.value="";
+}
+
+function broadcast(){
+  const text=msg.value; if(!text)return;
+  Object.values(peers).forEach(p=>{
+    if(p.connected) p.send(JSON.stringify({type:"chat",from:myId,text}));
+  });
+  log("ME: "+text); msg.value="";
+}
+</script>
+</body>
+</html>
