@@ -2,313 +2,120 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Belajar Backend Web: GAS + Drive</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>P2P Data Input & Viewer - Linux Timestamp</title>
 <style>
-body{
-  font-family:system-ui,-apple-system,Segoe UI,Roboto;
-  background:#f4f6f9;
-  margin:0;
-  color:#333;
-}
-header{
-  background:#1f2937;
-  color:white;
-  padding:25px;
-  text-align:center;
-}
-header p{
-  opacity:.8;
-  margin-top:5px;
-}
-.container{
-  max-width:1000px;
-  margin:auto;
-  padding:20px;
-}
-.card{
-  background:white;
-  padding:20px;
-  margin-bottom:20px;
-  border-radius:10px;
-  box-shadow:0 5px 15px rgba(0,0,0,.05);
-}
-h2{
-  margin-top:0;
-}
-button,input,textarea{
-  width:100%;
-  padding:10px;
-  margin-top:8px;
-  border-radius:6px;
-  border:1px solid #ccc;
-  font-size:14px;
-}
-button{
-  background:#2563eb;
-  color:white;
-  border:none;
-  cursor:pointer;
-}
-button:hover{
-  background:#1e4fd8;
-}
-pre{
-  background:#f0f0f0;
-  padding:10px;
-  overflow:auto;
-}
-table{
-  border-collapse:collapse;
-  margin-top:10px;
-  width:100%;
-}
-td, th{
-  border:1px solid #ccc;
-  padding:5px;
-}
-.info{
-  font-size:14px;
-  color:#555;
-}
-footer{
-  text-align:center;
-  padding:20px;
-  font-size:13px;
-  color:#777;
-}
+  body {margin:0;font-family:system-ui,sans-serif;background:#f4f4f4;padding:10px;}
+  .container{max-width:500px;margin:auto;background:#fff;padding:15px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1);}
+  input,button{width:100%;padding:12px;margin:6px 0;font-size:16px;border-radius:6px;border:1px solid #ccc;box-sizing:border-box;}
+  button{background-color:#4CAF50;color:white;border:none;cursor:pointer;}
+  button:hover{background-color:#45a049;}
+  .btn-group{display:flex;gap:10px;margin:6px 0;}
+  .btn-group button{flex:1;}
+  table{width:100%;border-collapse:collapse;margin-top:10px;}
+  table, th, td{border:1px solid #ccc;}
+  th, td{padding:10px;text-align:left;font-size:14px;word-break:break-word;}
+  @media(max-width:400px){th,td{font-size:12px;padding:8px;} input,button{font-size:14px;padding:10px;}}
 </style>
 </head>
-
 <body>
-
-<header>
-<h1>Belajar Backend Web: GAS + Google Drive</h1>
-<p>Mini LAB interaktif untuk memahami backend + database menggunakan Google Apps Script</p>
-</header>
-
 <div class="container">
+  <input id="kode" placeholder='Masukkan kode atau JSON (contoh: {"kode":"ABC"})'>
+  <div class="btn-group">
+    <button id="kirimBtn">Kirim Data</button>
+    <button id="ambilBtn">Ambil & Salin Data Terakhir</button>
+  </div>
 
-<!-- Step 1: Konsep -->
-<div class="card">
-<h2>📖 Konsep Backend GAS + Drive</h2>
-<p class="info">
-Dalam LAB ini, kita akan belajar cara membuat aplikasi web sederhana dengan:
-<ul>
-<li>Frontend HTML & JavaScript</li>
-<li>Backend Google Apps Script (GAS) sebagai API</li>
-<li>Database mini di Google Drive (file JSON per shard)</li>
-</ul>
-</p>
-<p class="info">
-Alur sederhana:
-<br>HTML &rarr; request POST &rarr; GAS Web App &rarr; Drive (CRUD JSON)
-</p>
+  <table>
+    <thead id="tableHead"><tr><th>Waktu</th><th>Kode</th></tr></thead>
+    <tbody id="hasil"></tbody>
+  </table>
 </div>
-
-<!-- Step 2: API URL -->
-<div class="card">
-<h2>🌐 Setup API URL</h2>
-<p class="info">
-Setelah deploy Web App GAS, masukkan URL di bawah supaya demo bisa berjalan real-time.
-</p>
-<input type="text" id="apiUrl" placeholder="Paste URL Web App GAS di sini">
-<button onclick="setAPI()">Connect API</button>
-<p id="apiInfo" class="info"></p>
-</div>
-
-<!-- Step 3: Create User -->
-<div class="card">
-<h2>👤 Create User</h2>
-<input type="number" id="userId" placeholder="User ID">
-<input type="text" id="username" placeholder="Username">
-<button onclick="createUser()">Create User</button>
-<p class="info">Klik untuk membuat user baru di backend GAS.</p>
-</div>
-
-<!-- Step 4: Add Posting -->
-<div class="card">
-<h2>📝 Add Posting</h2>
-<input type="text" id="konten" placeholder="Konten Posting">
-<button onclick="addPosting()">Add Posting</button>
-<p class="info">Tambahkan posting untuk user tertentu.</p>
-</div>
-
-<!-- Step 5: Get User -->
-<div class="card">
-<h2>🔍 Get User</h2>
-<input type="number" id="getUserId" placeholder="User ID">
-<button onclick="getUser()">Get User</button>
-<p class="info">Ambil data user secara real-time dari Drive.</p>
-</div>
-
-<!-- Step 6: List All Users -->
-<div class="card">
-<h2>📋 List All Users</h2>
-<button onclick="listUsers()">List Users</button>
-<div id="userTable"></div>
-<p class="info">Lihat semua user beserta posting. Data diambil langsung dari Drive.</p>
-</div>
-
-<!-- Step 7: Backend Code -->
-<div class="card">
-<h2>💻 Backend GAS Code</h2>
-<p class="info">Ini adalah contoh kode Google Apps Script yang digunakan untuk LAB ini:</p>
-<pre>
-const SHARD_SIZE = 1000;
-const FOLDER_NAME = "GAS_UserDB";
-
-function getFolder(){ 
-  const f = DriveApp.getFoldersByName(FOLDER_NAME);
-  return f.hasNext()? f.next(): DriveApp.createFolder(FOLDER_NAME);
-}
-
-function getShardFile(shardKey){
-  const files = getFolder().getFilesByName(shardKey+".json");
-  return files.hasNext()? files.next(): null;
-}
-
-function saveShard(shardKey,data){
-  const json = JSON.stringify(data);
-  const file = getShardFile(shardKey);
-  if(file) file.setContent(json);
-  else getFolder().createFile(shardKey+".json",json,MimeType.JSON);
-}
-
-function loadShard(shardKey){
-  const file = getShardFile(shardKey);
-  return file ? JSON.parse(file.getBlob().getDataAsString()) : {};
-}
-
-function getShardKey(userId){ return "users_"+(Math.floor(userId/SHARD_SIZE)+1); }
-
-function saveUser(userId,data){ 
-  const shard = loadShard(getShardKey(userId));
-  shard[userId]=data;
-  saveShard(getShardKey(userId),shard);
-}
-
-function getUser(userId){
-  const shard = loadShard(getShardKey(userId));
-  return shard[userId] || null;
-}
-
-function createUser(userId,username){
-  const now = new Date().getTime();
-  const user = {id:userId, username, posting:[], createdAt:now, lastActive:now};
-  saveUser(userId,user);
-}
-
-function addPosting(userId,konten){
-  const user = getUser(userId);
-  if(!user) return;
-  const now = new Date().getTime();
-  const postId = user.posting.length ? user.posting[user.posting.length-1].id+1 :1;
-  user.posting.push({id:postId,konten,createdAt:now});
-  user.lastActive = now;
-  saveUser(userId,user);
-}
-
-function listUsers(){
-  const folder = getFolder();
-  const files = folder.getFiles();
-  const users = [];
-  while(files.hasNext()){
-    const file = files.next();
-    if(file.getName().endsWith(".json")){
-      const shard = JSON.parse(file.getBlob().getDataAsString());
-      for(let uid in shard){ users.push(shard[uid]); }
-    }
-  }
-  return users;
-}
-
-function doGet(){ return ContentService.createTextOutput("Use POST with JSON payload"); }
-
-function doPost(e){
-  const params = JSON.parse(e.postData.contents);
-  let res={status:"error",message:"Unknown action"};
-  switch(params.action){
-    case "createUser": createUser(params.userId,params.username); res={status:"ok"}; break;
-    case "addPosting": addPosting(params.userId,params.konten); res={status:"ok"}; break;
-    case "getUser": res={status:"ok",data:getUser(params.userId)}; break;
-    case "listUsers": res={status:"ok",data:listUsers()}; break;
-  }
-  return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
-}
-</pre>
-</div>
-
-</div>
-
-<footer>
-LAB Belajar Backend Web • Google Apps Script + Google Drive • Interaktif & Real-Time
-</footer>
 
 <script>
-// Global API URL
-let API_URL=""
+const API="https://script.google.com/macros/s/AKfycbw2VnEteOJL__Mdp1sIu4ZwwBncc-Dd0v7gdpGgqPJAV5VYMkqdyCq5UX94ot05oCWIbA/exec";
 
-// Set API URL
-function setAPI(){
-  API_URL=document.getElementById("apiUrl").value.trim()
-  if(API_URL) document.getElementById("apiInfo").innerText="API connected: "+API_URL
-  else document.getElementById("apiInfo").innerText="Masukkan URL Web App GAS"
+// ===== Kirim data ke GAS =====
+async function kirim() {
+  const kodeInput = document.getElementById("kode");
+  let payload = {};
+  try {
+    if(kodeInput.value.trim()){
+      try {
+        payload = JSON.parse(kodeInput.value.trim());
+      } catch {
+        payload = {kode: kodeInput.value.trim()};
+      }
+    }
+    const res = await fetch(API, {method:"POST", body:JSON.stringify(payload)});
+    const data = await res.json();
+    if(data.status==="ok"){
+      kodeInput.value="";
+      alert("Data berhasil dikirim!");
+      ambil();
+    } else alert("Gagal kirim: "+data.message);
+  } catch(err){console.error(err); alert("Gagal kirim data!");}
 }
 
-// Helper POST request
-function apiPost(payload, cb){
-  if(!API_URL){alert("Masukkan URL API dulu!"); return;}
-  fetch(API_URL,{method:"POST",body:JSON.stringify(payload)})
-    .then(r=>r.json()).then(cb)
-    .catch(err=>document.getElementById("userTable").innerText=err);
+// ===== Ambil semua data dan tampilkan =====
+async function ambil() {
+  try {
+    const res = await fetch(API+"?t="+Date.now());
+    const d = await res.json();
+    const tbody = document.getElementById("hasil");
+    const theadRow = document.getElementById("tableHead").querySelector("tr");
+
+    tbody.innerHTML = "";
+
+    if(!d || d.length===0){
+      if(theadRow.children.length===0){
+        const th = document.createElement("th");
+        th.innerText="Data Kosong";
+        theadRow.appendChild(th);
+      }
+      return;
+    }
+
+    // Update header sesuai data terakhir
+    const headers = Object.keys(d[0]);
+    theadRow.innerHTML = "";
+    headers.forEach(h=>{
+      const th = document.createElement("th");
+      th.innerText = h;
+      theadRow.appendChild(th);
+    });
+
+    // Buat row tabel, konversi waktu Unix ke readable
+    d.forEach(item=>{
+      const tr = document.createElement("tr");
+      headers.forEach(h=>{
+        const td = document.createElement("td");
+        if(h==="waktu"){
+          td.innerText = new Date(item[h]*1000).toLocaleString();
+        } else {
+          td.innerText = item[h] || "";
+        }
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+
+    return d[d.length-1];
+  } catch(err){console.error(err); return null;}
 }
 
-// Create User
-function createUser(){
-  const userId = Number(document.getElementById("userId").value);
-  const username = document.getElementById("username").value;
-  apiPost({action:"createUser", userId, username}, r=>{
-    alert("Create User: "+JSON.stringify(r));
-  });
-}
+// ===== Tombol =====
+document.getElementById("kirimBtn").addEventListener("click", kirim);
+document.getElementById("ambilBtn").addEventListener("click", async ()=>{
+  const lastData = await ambil();
+  if(!lastData){alert("Belum ada data"); return;}
+  await navigator.clipboard.writeText(JSON.stringify(lastData));
+  alert("Data terakhir disalin: "+JSON.stringify(lastData));
+});
 
-// Add Posting
-function addPosting(){
-  const userId = Number(document.getElementById("userId").value);
-  const konten = document.getElementById("konten").value;
-  apiPost({action:"addPosting", userId, konten}, r=>{
-    alert("Add Posting: "+JSON.stringify(r));
-  });
-}
-
-// Get User
-function getUser(){
-  const userId = Number(document.getElementById("getUserId").value);
-  apiPost({action:"getUser", userId}, r=>{
-    document.getElementById("userTable").innerHTML=JSON.stringify(r,null,2);
-  });
-}
-
-// List All Users
-function listUsers(){
-  apiPost({action:"listUsers"}, r=>{
-    renderUserTable(r.data);
-  });
-}
-
-// Render Table
-function renderUserTable(users){
-  if(!users || !users.length){document.getElementById("userTable").innerHTML="No users"; return;}
-  let html = "<table><tr><th>ID</th><th>Username</th><th>Posting</th></tr>";
-  users.forEach(u=>{
-    html+="<tr><td>"+u.id+"</td><td>"+u.username+"</td><td>"+(u.posting?u.posting.map(p=>p.konten).join(", "):"")+"</td></tr>";
-  });
-  html+="</table>";
-  document.getElementById("userTable").innerHTML=html;
-}
+// ===== Auto refresh =====
+ambil();
+setInterval(ambil,3000);
 </script>
-
 </body>
 </html>
