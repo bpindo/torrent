@@ -83,19 +83,16 @@
 </head>
 <body>
 <div class="container">
-  <input id="kode" placeholder="Masukkan kode">
-
+  <input id="kode" placeholder="Masukkan kode atau data JSON (opsional)">
   <div class="btn-group">
     <button id="kirimBtn">Kirim</button>
   </div>
-
-  <button id="ambilBtn">Ambil Peer ID</button>
+  <button id="ambilBtn">Ambil Data Terakhir</button>
 
   <table>
-    <thead>
+    <thead id="tableHead">
       <tr>
-        <th>Waktu</th>
-        <th>Kode</th>
+        <!-- Header akan dibuat otomatis -->
       </tr>
     </thead>
     <tbody id="hasil"></tbody>
@@ -103,66 +100,94 @@
 </div>
 
 <script>
-const API="https://script.google.com/macros/s/AKfycbzBQPfAzh1GZjz7gPH5CTxupUs6rlSdEV1Sw-EVYFpuBM4Q9W5hicLkfNNXB152MjBQ3g/exec";
+const API="https://script.google.com/macros/s/AKfycbzkHx7rf4vHWdUM-pRjN2sX3mfVm0lQi22TXCALU9m0vyO1V7wnQ8evZAhn4elNBf0uKQ/exec";
 
-// ===== Fungsi =====
+// ===== Fungsi Kirim =====
 async function kirim() {
   const kodeInput = document.getElementById("kode");
-  if(!kodeInput.value.trim()) return;
+  let payload = {};
   try {
-    await fetch(API, {
+    if(kodeInput.value.trim()){
+      // Coba parse JSON, kalau gagal anggap string
+      try{
+        payload = JSON.parse(kodeInput.value.trim());
+      } catch{
+        payload = {kode: kodeInput.value.trim()};
+      }
+    }
+    const res = await fetch(API, {
       method: "POST",
-      body: JSON.stringify({kode: kodeInput.value.trim()})
+      body: JSON.stringify(payload)
     });
-    kodeInput.value = "";
-    alert("Kode berhasil dikirim!");
-  } catch(err) {
+    const data = await res.json();
+    if(data.status==="ok"){
+      kodeInput.value = "";
+      alert("Data berhasil dikirim!");
+      ambil(); // refresh tabel
+    } else {
+      alert("Gagal kirim: " + data.message);
+    }
+  } catch(err){
     console.error(err);
-    alert("Gagal kirim kode!");
+    alert("Gagal kirim data!");
   }
 }
 
+// ===== Fungsi Ambil =====
 async function ambil() {
   try {
     const res = await fetch(API + "?t=" + Date.now());
     const d = await res.json();
-    const hasil = document.getElementById("hasil");
-    hasil.innerHTML = "";
-    let lastData = null;
+    const tbody = document.getElementById("hasil");
+    const thead = document.getElementById("tableHead").querySelector("tr");
 
-    if(Array.isArray(d) && d.length){
-      d.forEach(item=>{
-        hasil.innerHTML += `<tr><td>${item.waktu}</td><td>${item.kode}</td></tr>`;
+    tbody.innerHTML = "";
+    thead.innerHTML = "";
+
+    if(d.length === 0) return;
+
+    // Buat header otomatis sesuai field pertama
+    const headers = Object.keys(d[0]);
+    headers.forEach(h=>{
+      const th = document.createElement("th");
+      th.innerText = h;
+      thead.appendChild(th);
+    });
+
+    // Buat row
+    d.forEach(item=>{
+      const tr = document.createElement("tr");
+      headers.forEach(h=>{
+        const td = document.createElement("td");
+        td.innerText = item[h] || "";
+        tr.appendChild(td);
       });
-      lastData = d[d.length-1];
-    } else if(d && d.kode){
-      hasil.innerHTML = `<tr><td>${d.waktu}</td><td>${d.kode}</td></tr>`;
-      lastData = d;
-    }
-    return lastData;
-  } catch(err) {
+      tbody.appendChild(tr);
+    });
+
+    // Kembalikan data terakhir
+    return d[d.length-1];
+  } catch(err){
     console.error(err);
     return null;
   }
 }
 
-// ===== Tombol Event Listener =====
+// ===== Event Listener Tombol =====
 document.getElementById("kirimBtn").addEventListener("click", kirim);
 
-document.getElementById("ambilBtn").addEventListener("click", async () => {
-  const table = document.getElementById("hasil");
-  const rows = table.getElementsByTagName("tr");
-  if(rows.length === 0){
-    alert("Belum ada data Peer ID");
+document.getElementById("ambilBtn").addEventListener("click", async ()=>{
+  const lastData = await ambil();
+  if(!lastData) {
+    alert("Belum ada data");
     return;
   }
-  const lastRow = rows[rows.length-1];
-  const peerId = lastRow.cells[1].innerText;
-  await navigator.clipboard.writeText(peerId);
-  alert("Peer ID disalin: " + peerId);
+  // Salin data terakhir ke clipboard sebagai JSON
+  await navigator.clipboard.writeText(JSON.stringify(lastData));
+  alert("Data terakhir disalin: " + JSON.stringify(lastData));
 });
 
-// ===== Auto ambil data setiap 3 detik =====
+// ===== Auto refresh setiap 3 detik =====
 ambil();
 setInterval(ambil, 3000);
 </script>
