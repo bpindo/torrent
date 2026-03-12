@@ -2,113 +2,78 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Viewer Konten P2P</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live HTML/JS Editor Lengkap</title>
 <style>
-body {
-  font-family: system-ui, sans-serif;
-  background: #020617;
-  color: #e5e7eb;
-  max-width: 760px;
-  margin: auto;
-  padding: 20px;
-}
-h1 { font-size: 1.4rem; }
-.card {
-  background: #0f172a;
-  padding: 15px;
-  border-radius: 12px;
-  margin-top: 15px;
-}
-.progress {
-  height: 10px;
-  background: #020617;
-  border-radius: 6px;
-  overflow: hidden;
-}
-.bar {
-  height: 100%;
-  width: 0%;
-  background: #38bdf8;
-}
-.small { font-size: 0.9rem; opacity: 0.8; }
-.file { margin-top: 10px; }
+  body {
+    font-family: system-ui, sans-serif;
+    margin: 20px;
+    background: #f9f9f9;
+  }
+  textarea {
+    width: 100%;
+    height: 200px;
+    font-family: monospace;
+    font-size: 14px;
+    padding: 10px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    resize: vertical;
+  }
+  iframe {
+    width: 100%;
+    height: 300px;
+    border: 1px solid #ccc;
+    margin-top: 15px;
+    border-radius: 5px;
+  }
+  button {
+    margin-top: 10px;
+    margin-right: 5px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+  }
 </style>
 </head>
-
 <body>
 
-<h1>📄 Viewer Konten Terdistribusi</h1>
-<p class="small">
-Konten ini dimuat melalui jaringan P2P browser (WebTorrent).
-</p>
+<h2>Live HTML/JS Editor Lengkap</h2>
+<p>Masukkan kode HTML/JS Anda di bawah ini:</p>
 
-<div id="content"></div>
+<textarea id="codeInput" placeholder="Tulis kode HTML/JS di sini..."></textarea>
+<br>
+<button onclick="pasteCode()">📋 Paste</button>
+<button onclick="runCode()">▶️ Run</button>
+<button onclick="clearCode()">🗑️ Clear</button>
+
+<h3>Hasil:</h3>
+<iframe id="output"></iframe>
 
 <script>
-const POPULAR_JSON_URL = "./popular.json";
+// Jalankan kode di iframe
+function runCode() {
+  const code = document.getElementById('codeInput').value;
+  const iframe = document.getElementById('output');
+  iframe.srcdoc = code;
+}
 
-const ANNOUNCE = [
-  "wss://tracker.openwebtorrent.com",
-  "wss://tracker.btorrent.xyz",
-  "wss://tracker.fastcast.nz"
-];
+// Hapus isi textarea dan iframe
+function clearCode() {
+  document.getElementById('codeInput').value = '';
+  document.getElementById('output').srcdoc = '';
+}
 
-const client = new WebTorrent();
-const container = document.getElementById("content");
-
-fetch(POPULAR_JSON_URL)
-.then(r => r.json())
-.then(data => {
-  if (!data.articles || !data.articles.length) {
-    container.textContent = "Konten belum tersedia.";
-    return;
+// Paste dari clipboard ke textarea
+async function pasteCode() {
+  try {
+    const text = await navigator.clipboard.readText();
+    document.getElementById('codeInput').value = text;
+  } catch (err) {
+    alert('Gagal membaca clipboard: ' + err);
   }
-
-  // Ambil 1 konten teratas (paling prioritas)
-  const article = data.articles[0];
-
-  const card = document.createElement("div");
-  card.className = "card";
-  card.innerHTML = `
-    <b>${article.title}</b>
-    <div class="small">Mengunduh via P2P…</div>
-    <div class="progress"><div class="bar"></div></div>
-    <div class="small" id="stat">0%</div>
-    <div class="file" id="file"></div>
-  `;
-  container.appendChild(card);
-
-  const bar = card.querySelector(".bar");
-  const stat = card.querySelector("#stat");
-  const fileBox = card.querySelector("#file");
-
-  client.add(article.magnet, { announce: ANNOUNCE }, torrent => {
-
-    torrent.on("download", () => {
-      const p = Math.round(torrent.progress * 100);
-      bar.style.width = p + "%";
-      stat.textContent =
-        p + "% • " +
-        (torrent.downloadSpeed/1024).toFixed(1) + " KB/s • " +
-        torrent.numPeers + " peer";
-    });
-
-    torrent.on("done", () => {
-      stat.textContent = "Selesai • sekarang ikut seeding";
-
-      torrent.files.forEach(file => {
-        file.appendTo(fileBox);
-      });
-    });
-  });
-
-})
-.catch(() => {
-  container.textContent = "Gagal memuat data.";
-});
+}
 </script>
 
 </body>
