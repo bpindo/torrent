@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mini LAB GAS + Drive</title>
+<title>LAB Dummy User GAS + Drive</title>
 <style>
-body{font-family:system-ui,-apple-system,Segoe UI,Roboto;background:#f4f6f9;margin:0;color:#333;padding:10px;}
-h2{margin:10px 0;}
-input, button, textarea{width:100%;padding:10px;margin:5px 0;border-radius:5px;border:1px solid #ccc;font-size:14px;}
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto;background:#f4f6f9;margin:0;padding:10px;color:#333;}
+h2{margin-top:0;}
+button,input{width:100%;padding:10px;margin:5px 0;border-radius:5px;border:1px solid #ccc;font-size:14px;}
 button{background:#2563eb;color:white;border:none;cursor:pointer;}
 button:hover{background:#1e4fd8;}
 pre{background:#eee;padding:10px;overflow-x:auto;}
@@ -16,85 +16,66 @@ pre{background:#eee;padding:10px;overflow-x:auto;}
 </head>
 <body>
 
-<h1>Mini LAB GAS + Drive</h1>
+<h1>LAB Dummy User GAS + Drive</h1>
 
 <div class="card">
-<h2>🌐 Hubungkan API</h2>
-<input type="text" id="apiUrl" placeholder="Paste URL Web App GAS">
+<h2>🌐 API Demo Terhubung</h2>
+<input type="text" id="apiUrl" value="https://script.google.com/macros/s/AKfycbzBQPfAzh1GZjz7gPH5CTxupUs6rlSdEV1Sw-EVYFpuBM4Q9W5hicLkfNNXB152MjBQ3g/exec">
 <button onclick="setAPI()">Connect API</button>
 <p id="apiInfo"></p>
 </div>
 
 <div class="card">
-<h2>👤 Create User</h2>
-<input type="number" id="userId" placeholder="User ID">
-<input type="text" id="username" placeholder="Username">
-<button onclick="createUser()">Create User</button>
+<h2>➕ Tambah User Dummy</h2>
+<button onclick="createDummyUser()">Tambah User Dummy</button>
 </div>
 
 <div class="card">
-<h2>📝 Add Posting</h2>
-<input type="number" id="userIdPost" placeholder="User ID">
-<input type="text" id="konten" placeholder="Konten Posting">
-<button onclick="addPosting()">Add Posting</button>
-</div>
-
-<div class="card">
-<h2>🔍 Get User</h2>
-<input type="number" id="getUserId" placeholder="User ID">
-<button onclick="getUser()">Get User</button>
-<pre id="userOutput"></pre>
-</div>
-
-<div class="card">
-<h2>📋 List All Users</h2>
-<button onclick="listUsers()">List Users</button>
+<h2>📋 Lihat Semua User</h2>
+<button onclick="listUsers()">Lihat Data</button>
 <pre id="userList"></pre>
 </div>
 
 <script>
-let API_URL="";
+let API_URL="https://script.google.com/macros/s/AKfycbzBQPfAzh1GZjz7gPH5CTxupUs6rlSdEV1Sw-EVYFpuBM4Q9W5hicLkfNNXB152MjBQ3g/exec";
 
 function setAPI(){
   API_URL=document.getElementById("apiUrl").value.trim();
   document.getElementById("apiInfo").innerText = API_URL ? "API Connected" : "Masukkan URL API";
 }
 
+// POST ke GAS Web App
 function apiPost(payload, cb){
   if(!API_URL){alert("Masukkan URL API dulu!"); return;}
-  fetch(API_URL,{method:"POST",body:JSON.stringify(payload)})
-    .then(r=>r.json()).then(cb)
-    .catch(err=>console.error(err));
+  fetch(API_URL,{
+    method:"POST",
+    body:JSON.stringify(payload)
+  }).then(r=>r.json()).then(cb).catch(err=>console.error(err));
 }
 
-function createUser(){
-  const userId = Number(document.getElementById("userId").value);
-  const username = document.getElementById("username").value;
+// Buat user dummy acak
+function createDummyUser(){
+  const userId = Date.now(); // ID unik dari timestamp
+  const username = "User"+Math.floor(Math.random()*10000);
   apiPost({action:"createUser", userId, username}, r=>{
-    alert("Create User: "+JSON.stringify(r));
+    alert("User Dummy Ditambahkan:\n"+username+" (ID: "+userId+")");
+    listUsers(); // update list otomatis
   });
 }
 
-function addPosting(){
-  const userId = Number(document.getElementById("userIdPost").value);
-  const konten = document.getElementById("konten").value;
-  apiPost({action:"addPosting", userId, konten}, r=>{
-    alert("Add Posting: "+JSON.stringify(r));
-  });
-}
-
-function getUser(){
-  const userId = Number(document.getElementById("getUserId").value);
-  apiPost({action:"getUser", userId}, r=>{
-    document.getElementById("userOutput").innerText = JSON.stringify(r, null, 2);
-  });
-}
-
+// Ambil semua user
 function listUsers(){
   apiPost({action:"listUsers"}, r=>{
+    if(!r.data || r.data.length==0){
+      document.getElementById("userList").innerText="Belum ada user.";
+      return;
+    }
     document.getElementById("userList").innerText = JSON.stringify(r.data, null, 2);
   });
 }
+
+// Set awal API info
+setAPI();
 </script>
 
 </body>
