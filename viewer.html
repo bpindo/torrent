@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Full-Featured Live HTML/JS Editor</title>
+<title>Mobile-Optimized HTML/JS Editor</title>
 <style>
   body, html {
     margin: 0;
@@ -14,14 +14,16 @@
     flex-direction: column;
     background: #f9f9f9;
   }
+
   #editorContainer {
     padding: 10px;
     background: #fff;
     border-bottom: 1px solid #ccc;
   }
+
   textarea {
     width: 100%;
-    min-height: 150px;
+    min-height: 120px;
     font-family: monospace;
     font-size: 14px;
     padding: 10px;
@@ -29,23 +31,50 @@
     border: 1px solid #ccc;
     border-radius: 5px;
     resize: vertical;
+    margin-top: 5px;
   }
-  button {
+
+  .button-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
     margin-top: 10px;
-    margin-right: 5px;
-    padding: 6px 14px;
-    font-size: 14px;
-    cursor: pointer;
   }
+
+  button {
+    flex: 1 1 auto;
+    padding: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    min-width: 90px;
+    border-radius: 5px;
+    border: 1px solid #888;
+  }
+
   select {
     margin-top: 10px;
-    padding: 5px 8px;
-    font-size: 14px;
+    padding: 8px;
+    font-size: 16px;
+    width: 100%;
+    border-radius: 5px;
+    border: 1px solid #888;
   }
+
   #output {
     flex-grow: 1;
     width: 100%;
     border: none;
+  }
+
+  @media (max-width: 500px) {
+    button {
+      font-size: 14px;
+      padding: 8px;
+      min-width: 70px;
+    }
+    textarea {
+      font-size: 13px;
+    }
   }
 </style>
 </head>
@@ -53,23 +82,27 @@
 
 <div id="editorContainer">
   <button onclick="toggleEditor()">🔽 Toggle Input</button>
-  <br>
-  <textarea id="codeInput" placeholder="Tulis kode HTML/JS di sini..."></textarea>
-  <br>
-  <button onclick="pasteCode()">📋 Paste</button>
-  <button onclick="runCode()">▶️ Run</button>
-  <button onclick="clearCode()">🗑️ Clear</button>
-  <button onclick="copyCode()">📋 Copy Kode</button>
-  <button onclick="saveProject()">💾 Save</button>
-  <button onclick="saveAsProject()">💾 Save As</button>
-  <button onclick="renameProject()">✏️ Rename Project</button>
 
-  <br><br>
+  <textarea id="codeInput" placeholder="Tulis kode HTML/JS di sini..."></textarea>
+
+  <div class="button-row">
+    <button onclick="pasteCode()">📋 Paste</button>
+    <button onclick="runCode()">▶️ Run</button>
+    <button onclick="clearCode()">🗑️ Clear</button>
+    <button onclick="copyCode()">📋 Copy</button>
+  </div>
+
+  <div class="button-row">
+    <button onclick="saveProject()">💾 Save</button>
+    <button onclick="saveAsProject()">💾 Save As</button>
+    <button onclick="renameProject()">✏️ Rename</button>
+  </div>
+
   <label for="projectSelect">Buka Proyek:</label>
   <select id="projectSelect" onchange="loadSelectedProject()">
     <option value="">-- Pilih proyek --</option>
   </select>
-  <button onclick="deleteProject()">❌ Hapus Proyek</button>
+  <button style="width: 100%; margin-top: 5px;" onclick="deleteProject()">❌ Hapus Proyek</button>
 </div>
 
 <iframe id="output"></iframe>
@@ -77,19 +110,16 @@
 <script>
 let defaultProjectCounter = 1;
 
-// Jalankan kode di iframe
 function runCode() {
   const code = document.getElementById('codeInput').value;
   document.getElementById('output').srcdoc = code;
 }
 
-// Hapus isi textarea dan iframe
 function clearCode() {
   document.getElementById('codeInput').value = '';
   document.getElementById('output').srcdoc = '';
 }
 
-// Paste dari clipboard ke textarea
 async function pasteCode() {
   try {
     const text = await navigator.clipboard.readText();
@@ -99,7 +129,6 @@ async function pasteCode() {
   }
 }
 
-// Copy kode input ke clipboard
 async function copyCode() {
   const code = document.getElementById('codeInput').value;
   if (!code.trim()) { alert('Tidak ada kode untuk disalin!'); return; }
@@ -111,7 +140,6 @@ async function copyCode() {
   }
 }
 
-// Toggle lipat/buka textarea dan semua tombol kecuali toggle
 function toggleEditor() {
   const editorContainer = document.getElementById('editorContainer');
   const children = Array.from(editorContainer.children);
@@ -122,7 +150,6 @@ function toggleEditor() {
   });
 }
 
-// Save default project
 function saveProject() {
   const code = document.getElementById('codeInput').value;
   if (!code.trim()) { alert('Kode kosong!'); return; }
@@ -133,7 +160,6 @@ function saveProject() {
   updateProjectList();
 }
 
-// Save As project
 function saveAsProject() {
   const code = document.getElementById('codeInput').value;
   if (!code.trim()) { alert('Kode kosong!'); return; }
@@ -144,7 +170,6 @@ function saveAsProject() {
   updateProjectList();
 }
 
-// Rename project
 function renameProject() {
   const select = document.getElementById('projectSelect');
   const oldName = select.value;
@@ -162,7 +187,6 @@ function renameProject() {
   updateProjectList();
 }
 
-// Load project dari dropdown
 function loadSelectedProject() {
   const select = document.getElementById('projectSelect');
   const name = select.value;
@@ -174,7 +198,6 @@ function loadSelectedProject() {
   }
 }
 
-// Hapus proyek terpilih
 function deleteProject() {
   const select = document.getElementById('projectSelect');
   const name = select.value;
@@ -186,7 +209,6 @@ function deleteProject() {
   }
 }
 
-// Update dropdown proyek
 function updateProjectList() {
   const select = document.getElementById('projectSelect');
   select.innerHTML = '<option value="">-- Pilih proyek --</option>';
@@ -198,7 +220,6 @@ function updateProjectList() {
   });
 }
 
-// Inisialisasi
 updateProjectList();
 </script>
 
