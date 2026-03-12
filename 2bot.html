@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LAB Dummy User GAS + Drive</title>
+<title>LAB Dummy User GAS Live</title>
 <style>
 body{font-family:system-ui,-apple-system,Segoe UI,Roboto;background:#f4f6f9;margin:0;padding:10px;color:#333;}
-h2{margin-top:0;}
+h1,h2{margin:10px 0;}
 button,input{width:100%;padding:10px;margin:5px 0;border-radius:5px;border:1px solid #ccc;font-size:14px;}
 button{background:#2563eb;color:white;border:none;cursor:pointer;}
 button:hover{background:#1e4fd8;}
@@ -16,7 +16,7 @@ pre{background:#eee;padding:10px;overflow-x:auto;}
 </head>
 <body>
 
-<h1>LAB Dummy User GAS + Drive</h1>
+<h1>LAB Dummy User GAS Live</h1>
 
 <div class="card">
 <h2>🌐 API Demo Terhubung</h2>
@@ -37,44 +37,52 @@ pre{background:#eee;padding:10px;overflow-x:auto;}
 </div>
 
 <script>
-let API_URL="https://script.google.com/macros/s/AKfycbzBQPfAzh1GZjz7gPH5CTxupUs6rlSdEV1Sw-EVYFpuBM4Q9W5hicLkfNNXB152MjBQ3g/exec";
+let API_URL = document.getElementById("apiUrl").value.trim();
 
 function setAPI(){
   API_URL=document.getElementById("apiUrl").value.trim();
   document.getElementById("apiInfo").innerText = API_URL ? "API Connected" : "Masukkan URL API";
 }
 
-// POST ke GAS Web App
-function apiPost(payload, cb){
-  if(!API_URL){alert("Masukkan URL API dulu!"); return;}
-  fetch(API_URL,{
-    method:"POST",
-    body:JSON.stringify(payload)
-  }).then(r=>r.json()).then(cb).catch(err=>console.error(err));
+// Fungsi async untuk POST ke GAS
+async function apiPost(payload){
+  if(!API_URL){alert("Masukkan URL API!"); return null;}
+  try {
+    const res = await fetch(API_URL,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify(payload)
+    });
+    return await res.json();
+  } catch(err){
+    console.error(err);
+    alert("Gagal menghubungi API!");
+    return null;
+  }
 }
 
 // Buat user dummy acak
-function createDummyUser(){
-  const userId = Date.now(); // ID unik dari timestamp
+async function createDummyUser(){
+  const userId = Date.now();
   const username = "User"+Math.floor(Math.random()*10000);
-  apiPost({action:"createUser", userId, username}, r=>{
-    alert("User Dummy Ditambahkan:\n"+username+" (ID: "+userId+")");
-    listUsers(); // update list otomatis
-  });
+  const res = await apiPost({action:"createUser", userId, username});
+  if(res && res.status==="ok"){
+    alert(`User Dummy Ditambahkan:\n${username} (ID: ${userId})`);
+    listUsers(); // update otomatis
+  }
 }
 
-// Ambil semua user
-function listUsers(){
-  apiPost({action:"listUsers"}, r=>{
-    if(!r.data || r.data.length==0){
-      document.getElementById("userList").innerText="Belum ada user.";
-      return;
-    }
-    document.getElementById("userList").innerText = JSON.stringify(r.data, null, 2);
-  });
+// Lihat semua user
+async function listUsers(){
+  const res = await apiPost({action:"listUsers"});
+  if(!res || !res.data || res.data.length===0){
+    document.getElementById("userList").innerText="Belum ada user.";
+    return;
+  }
+  document.getElementById("userList").innerText = JSON.stringify(res.data,null,2);
 }
 
-// Set awal API info
+// Set awal info API
 setAPI();
 </script>
 
