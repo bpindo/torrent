@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>P2P Data Input & Viewer</title>
+<title>P2P Data Input & Viewer - Linux Timestamp & Auto-Adapt Kolom</title>
 <style>
   body {margin:0;font-family:system-ui,sans-serif;background:#f4f4f4;padding:10px;}
   .container{max-width:500px;margin:auto;background:#fff;padding:15px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1);}
@@ -27,13 +27,13 @@
   </div>
 
   <table>
-    <thead id="tableHead"><tr><th>Waktu</th><th>Kode</th></tr></thead>
+    <thead id="tableHead"><tr></tr></thead>
     <tbody id="hasil"></tbody>
   </table>
 </div>
 
 <script>
-const API="https://script.google.com/macros/s/AKfycbyqxBmzWdKV9PVxN6g6bHjcBv7peJgbCPtydUy4_4R2r61Gtsx_D1L7Of36T_GIvYvBPw/exec";
+const API="https://script.google.com/macros/s/AKfycbw2VnEteOJL__Mdp1sIu4ZwwBncc-Dd0v7gdpGgqPJAV5VYMkqdyCq5UX94ot05oCWIbA/exec";
 
 // ===== Kirim data ke GAS =====
 async function kirim() {
@@ -57,7 +57,7 @@ async function kirim() {
   } catch(err){console.error(err); alert("Gagal kirim data!");}
 }
 
-// ===== Ambil semua data dan tampilkan =====
+// ===== Ambil semua data dan tampilkan auto-adapt kolom =====
 async function ambil() {
   try {
     const res = await fetch(API+"?t="+Date.now());
@@ -68,29 +68,30 @@ async function ambil() {
     tbody.innerHTML = "";
 
     if(!d || d.length===0){
-      if(theadRow.children.length===0){
-        const th = document.createElement("th");
-        th.innerText="Data Kosong";
-        theadRow.appendChild(th);
-      }
+      theadRow.innerHTML="<th>Belum ada data</th>";
       return;
     }
 
-    // Update header sesuai data terakhir
-    const headers = Object.keys(d[0]);
-    theadRow.innerHTML = "";
+    // Cari semua key unik dari seluruh data (auto-adapt kolom)
+    const allKeys = new Set();
+    d.forEach(item=>Object.keys(item).forEach(k=>allKeys.add(k)));
+    const headers = Array.from(allKeys);
+
+    // Update header
+    theadRow.innerHTML="";
     headers.forEach(h=>{
       const th = document.createElement("th");
       th.innerText = h;
       theadRow.appendChild(th);
     });
 
-    // Buat row tabel
+    // Buat row
     d.forEach(item=>{
       const tr = document.createElement("tr");
       headers.forEach(h=>{
         const td = document.createElement("td");
-        td.innerText = item[h] || "";
+        if(h==="waktu") td.innerText = new Date(item[h]*1000).toLocaleString();
+        else td.innerText = item[h] || "";
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
