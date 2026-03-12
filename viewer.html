@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Live HTML/JS Editor Final</title>
+<title>Full-Featured Live HTML/JS Editor</title>
 <style>
   body, html {
     margin: 0;
@@ -53,14 +53,16 @@
 
 <div id="editorContainer">
   <button onclick="toggleEditor()">🔽 Toggle Input</button>
-  
+  <br>
   <textarea id="codeInput" placeholder="Tulis kode HTML/JS di sini..."></textarea>
   <br>
   <button onclick="pasteCode()">📋 Paste</button>
   <button onclick="runCode()">▶️ Run</button>
   <button onclick="clearCode()">🗑️ Clear</button>
+  <button onclick="copyCode()">📋 Copy Kode</button>
   <button onclick="saveProject()">💾 Save</button>
   <button onclick="saveAsProject()">💾 Save As</button>
+  <button onclick="renameProject()">✏️ Rename Project</button>
 
   <br><br>
   <label for="projectSelect">Buka Proyek:</label>
@@ -97,11 +99,22 @@ async function pasteCode() {
   }
 }
 
+// Copy kode input ke clipboard
+async function copyCode() {
+  const code = document.getElementById('codeInput').value;
+  if (!code.trim()) { alert('Tidak ada kode untuk disalin!'); return; }
+  try {
+    await navigator.clipboard.writeText(code);
+    alert('Kode berhasil disalin ke clipboard!');
+  } catch (err) {
+    alert('Gagal menyalin kode: ' + err);
+  }
+}
+
 // Toggle lipat/buka textarea dan semua tombol kecuali toggle
 function toggleEditor() {
   const editorContainer = document.getElementById('editorContainer');
   const children = Array.from(editorContainer.children);
-  
   children.forEach(el => {
     if (el.tagName !== 'BUTTON' || !el.textContent.includes('Toggle Input')) {
       el.style.display = (el.style.display === 'none') ? 'block' : 'none';
@@ -128,6 +141,24 @@ function saveAsProject() {
   if (!name) return;
   localStorage.setItem(name, code);
   alert(`Proyek tersimpan sebagai "${name}"`);
+  updateProjectList();
+}
+
+// Rename project
+function renameProject() {
+  const select = document.getElementById('projectSelect');
+  const oldName = select.value;
+  if (!oldName) { alert('Pilih proyek terlebih dahulu!'); return; }
+  const newName = prompt('Masukkan nama baru untuk proyek:', oldName);
+  if (!newName) return;
+  if (localStorage.getItem(newName)) {
+    alert('Nama proyek sudah ada! Gunakan nama lain.');
+    return;
+  }
+  const code = localStorage.getItem(oldName);
+  localStorage.setItem(newName, code);
+  localStorage.removeItem(oldName);
+  alert(`Proyek "${oldName}" diganti menjadi "${newName}"`);
   updateProjectList();
 }
 
