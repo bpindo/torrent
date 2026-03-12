@@ -3,16 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Live HTML/JS Editor Lengkap</title>
+<title>Live HTML/JS Editor Maksimal</title>
 <style>
-  body {
+  body, html {
+    margin: 0;
+    padding: 0;
     font-family: system-ui, sans-serif;
-    margin: 20px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
     background: #f9f9f9;
+  }
+  #editorContainer {
+    padding: 10px;
+    background: #fff;
+    border-bottom: 1px solid #ccc;
   }
   textarea {
     width: 100%;
-    height: 200px;
+    min-height: 150px;
     font-family: monospace;
     font-size: 14px;
     padding: 10px;
@@ -21,13 +30,6 @@
     border-radius: 5px;
     resize: vertical;
   }
-  iframe {
-    width: 100%;
-    height: 300px;
-    border: 1px solid #ccc;
-    margin-top: 15px;
-    border-radius: 5px;
-  }
   button {
     margin-top: 10px;
     margin-right: 5px;
@@ -35,28 +37,32 @@
     font-size: 14px;
     cursor: pointer;
   }
+  #output {
+    flex-grow: 1;
+    width: 100%;
+    border: none;
+  }
 </style>
 </head>
 <body>
 
-<h2>Live HTML/JS Editor Lengkap</h2>
-<p>Masukkan kode HTML/JS Anda di bawah ini:</p>
+<div id="editorContainer">
+  <button onclick="toggleEditor()">🔽 Toggle Input</button>
+  <br>
+  <textarea id="codeInput" placeholder="Tulis kode HTML/JS di sini..."></textarea>
+  <br>
+  <button onclick="pasteCode()">📋 Paste</button>
+  <button onclick="runCode()">▶️ Run</button>
+  <button onclick="clearCode()">🗑️ Clear</button>
+</div>
 
-<textarea id="codeInput" placeholder="Tulis kode HTML/JS di sini..."></textarea>
-<br>
-<button onclick="pasteCode()">📋 Paste</button>
-<button onclick="runCode()">▶️ Run</button>
-<button onclick="clearCode()">🗑️ Clear</button>
-
-<h3>Hasil:</h3>
 <iframe id="output"></iframe>
 
 <script>
 // Jalankan kode di iframe
 function runCode() {
   const code = document.getElementById('codeInput').value;
-  const iframe = document.getElementById('output');
-  iframe.srcdoc = code;
+  document.getElementById('output').srcdoc = code;
 }
 
 // Hapus isi textarea dan iframe
@@ -72,6 +78,16 @@ async function pasteCode() {
     document.getElementById('codeInput').value = text;
   } catch (err) {
     alert('Gagal membaca clipboard: ' + err);
+  }
+}
+
+// Toggle lipat/buka textarea
+function toggleEditor() {
+  const editor = document.getElementById('codeInput');
+  if (editor.style.display === 'none') {
+    editor.style.display = 'block';
+  } else {
+    editor.style.display = 'none';
   }
 }
 </script>
