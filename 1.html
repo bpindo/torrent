@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hypercore P2P Chat</title>
+<style>
+body { font-family: system-ui; background: #f4f4f4; margin:0; padding:20px; }
+#chat { height:300px; overflow-y:auto; border:1px solid #ccc; padding:10px; background:#fff; }
+input, button { padding:8px; margin-top:8px; width:100%; box-sizing:border-box; }
+</style>
+</head>
+<body>
+<h2>Hypercore P2P Chat</h2>
+<div id="chat"></div>
+<input id="message" placeholder="Tulis pesan...">
+<button id="send">Kirim</button>
+
+<script type="module">
+// Import Hypercore & SimplePeer via CDN
+import Hypercore from 'https://cdn.jsdelivr.net/npm/hypercore@10.2.1/+esm';
+import ram from 'https://cdn.jsdelivr.net/npm/random-access-memory/+esm';
+import HypercoreProtocol from 'https://cdn.jsdelivr.net/npm/hypercore-protocol@9.0.0/+esm';
+import SimplePeer from 'https://cdn.jsdelivr.net/npm/simple-peer@9.12.0/simplepeer.min.js';
+
+// Setup Hypercore di RAM (untuk browser)
+const core = new Hypercore(ram, { valueEncoding: 'json' });
+const chatDiv = document.getElementById('chat');
+const input = document.getElementById('message');
+const sendBtn = document.getElementById('send');
+
+let peers = [];
+
+// Tampilkan pesan dari log Hypercore
+function render() {
+  core.createReadStream({ live: true }).on('data', data => {
+    const msg = `[${new Date(data.time).toLocaleTimeString()}] ${data.user}: ${data.text}`;
+    const p = document.createElement('p');
+    p.textContent = msg;
+    chatDiv.appendChild(p);
+    chatDiv.scrollTop = chatDiv.scrollHeight;
+  });
+}
+
+core.ready().then(() => {
+  render();
+});
+
+// Fungsi kirim pesan
+sendBtn.onclick = async () => {
+  const text = input.value.trim();
+  if(!text) return;
+  const msg = { user: "User"+Math.floor(Math.random()*999), text, time: Date.now() };
+  await core.append(msg); // Append-only log Hypercore
+  broadcast(msg);          // Kirim ke semua peer
+  input.value = '';
+};
+
+// Fungsi broadcast ke peers
+function broadcast(msg){
+  peers.forEach(p=>{
+    if(p.connected) p.send(JSON.stringify(msg));
+  });
+}
+
+// Tambah peer baru
+function addPeer(peerSignal){
+  const p = new SimplePeer({ initiator: false, trickle: false });
+  p.signal(peerSignal);
+  p.on('signal', s => console.log("Signal to send:", s));
+  p.on('data', data => {
+    const msg = JSON.parse(data.toString());
+    core.append(msg);
+  });
+  peers.push(p);
+}
+
+// Demo: bisa buat initiator peer manual di console
+window.addPeer = addPeer;
+
+</script>
+</body>
+</html>
