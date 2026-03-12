@@ -5,80 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>P2P Mobile Ready - Kirim Kode</title>
 <style>
-  body {
-    margin: 0;
-    font-family: system-ui, sans-serif;
-    background: #f4f4f4;
-    padding: 10px;
-  }
-
-  .container {
-    max-width: 500px;
-    margin: auto;
-    background: #fff;
-    padding: 15px;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-  }
-
-  input, button {
-    width: 100%;
-    padding: 12px;
-    margin: 6px 0;
-    font-size: 16px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    box-sizing: border-box;
-  }
-
-  button {
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    cursor: pointer;
-  }
-
-  button:hover {
-    background-color: #45a049;
-  }
-
-  .btn-group {
-    display: flex;
-    gap: 10px;
-    margin: 6px 0;
-  }
-
-  .btn-group button {
-    flex: 1;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-  }
-
-  table, th, td {
-    border: 1px solid #ccc;
-  }
-
-  th, td {
-    padding: 10px;
-    text-align: left;
-    font-size: 14px;
-    word-break: break-word;
-  }
-
-  @media (max-width: 400px) {
-    th, td {
-      font-size: 12px;
-      padding: 8px;
-    }
-    input, button {
-      font-size: 14px;
-      padding: 10px;
-    }
-  }
+  body {margin:0;font-family:system-ui,sans-serif;background:#f4f4f4;padding:10px;}
+  .container{max-width:500px;margin:auto;background:#fff;padding:15px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1);}
+  input,button{width:100%;padding:12px;margin:6px 0;font-size:16px;border-radius:6px;border:1px solid #ccc;box-sizing:border-box;}
+  button{background-color:#4CAF50;color:white;border:none;cursor:pointer;}
+  button:hover{background-color:#45a049;}
+  .btn-group{display:flex;gap:10px;margin:6px 0;}
+  .btn-group button{flex:1;}
+  table{width:100%;border-collapse:collapse;margin-top:10px;}
+  table, th, td{border:1px solid #ccc;}
+  th, td{padding:10px;text-align:left;font-size:14px;word-break:break-word;}
+  @media(max-width:400px){th,td{font-size:12px;padding:8px;} input,button{font-size:14px;padding:10px;}}
 </style>
 </head>
 <body>
@@ -91,16 +28,14 @@
 
   <table>
     <thead id="tableHead">
-      <tr>
-        <!-- Header akan dibuat otomatis -->
-      </tr>
+      <tr><th>Waktu</th><th>Kode</th></tr> <!-- Minimal satu kolom default -->
     </thead>
     <tbody id="hasil"></tbody>
   </table>
 </div>
 
 <script>
-const API="https://script.google.com/macros/s/AKfycbzkHx7rf4vHWdUM-pRjN2sX3mfVm0lQi22TXCALU9m0vyO1V7wnQ8evZAhn4elNBf0uKQ/exec";
+const API="YOUR_GAS_URL_HERE"; // ganti dengan URL GAS mu
 
 // ===== Fungsi Kirim =====
 async function kirim() {
@@ -108,53 +43,51 @@ async function kirim() {
   let payload = {};
   try {
     if(kodeInput.value.trim()){
-      // Coba parse JSON, kalau gagal anggap string
       try{
         payload = JSON.parse(kodeInput.value.trim());
       } catch{
         payload = {kode: kodeInput.value.trim()};
       }
     }
-    const res = await fetch(API, {
-      method: "POST",
-      body: JSON.stringify(payload)
-    });
+    const res = await fetch(API, {method:"POST", body:JSON.stringify(payload)});
     const data = await res.json();
     if(data.status==="ok"){
-      kodeInput.value = "";
+      kodeInput.value="";
       alert("Data berhasil dikirim!");
       ambil(); // refresh tabel
-    } else {
-      alert("Gagal kirim: " + data.message);
-    }
-  } catch(err){
-    console.error(err);
-    alert("Gagal kirim data!");
-  }
+    } else alert("Gagal kirim: "+data.message);
+  } catch(err){console.error(err); alert("Gagal kirim data!");}
 }
 
 // ===== Fungsi Ambil =====
 async function ambil() {
   try {
-    const res = await fetch(API + "?t=" + Date.now());
+    const res = await fetch(API+"?t="+Date.now());
     const d = await res.json();
     const tbody = document.getElementById("hasil");
-    const thead = document.getElementById("tableHead").querySelector("tr");
+    const theadRow = document.getElementById("tableHead").querySelector("tr");
 
     tbody.innerHTML = "";
-    thead.innerHTML = "";
 
-    if(d.length === 0) return;
+    if(!d || d.length===0){
+      if(theadRow.children.length===0){
+        const th = document.createElement("th");
+        th.innerText="Data Kosong";
+        theadRow.appendChild(th);
+      }
+      return;
+    }
 
-    // Buat header otomatis sesuai field pertama
+    // update header otomatis
     const headers = Object.keys(d[0]);
+    theadRow.innerHTML = "";
     headers.forEach(h=>{
       const th = document.createElement("th");
       th.innerText = h;
-      thead.appendChild(th);
+      theadRow.appendChild(th);
     });
 
-    // Buat row
+    // buat row
     d.forEach(item=>{
       const tr = document.createElement("tr");
       headers.forEach(h=>{
@@ -165,31 +98,22 @@ async function ambil() {
       tbody.appendChild(tr);
     });
 
-    // Kembalikan data terakhir
     return d[d.length-1];
-  } catch(err){
-    console.error(err);
-    return null;
-  }
+  } catch(err){console.error(err); return null;}
 }
 
-// ===== Event Listener Tombol =====
+// ===== Tombol =====
 document.getElementById("kirimBtn").addEventListener("click", kirim);
-
 document.getElementById("ambilBtn").addEventListener("click", async ()=>{
   const lastData = await ambil();
-  if(!lastData) {
-    alert("Belum ada data");
-    return;
-  }
-  // Salin data terakhir ke clipboard sebagai JSON
+  if(!lastData){alert("Belum ada data"); return;}
   await navigator.clipboard.writeText(JSON.stringify(lastData));
-  alert("Data terakhir disalin: " + JSON.stringify(lastData));
+  alert("Data terakhir disalin: "+JSON.stringify(lastData));
 });
 
-// ===== Auto refresh setiap 3 detik =====
+// ===== Auto refresh =====
 ambil();
-setInterval(ambil, 3000);
+setInterval(ambil,3000);
 </script>
 </body>
 </html>
