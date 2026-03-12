@@ -3,81 +3,258 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hypercore P2P Chat</title>
+<title>Mini GAS Fullstack Learning Guide</title>
 <style>
-body { font-family: system-ui; background: #f4f4f4; margin:0; padding:20px; }
-#chat { height:300px; overflow-y:auto; border:1px solid #ccc; padding:10px; background:#fff; }
-input, button { padding:8px; margin-top:8px; width:100%; box-sizing:border-box; }
+body{font-family:sans-serif;margin:20px;}
+input, button{margin:5px;padding:5px;}
+pre{background:#f0f0f0;padding:10px;overflow:auto;}
+table{border-collapse:collapse;margin-top:10px;width:100%;}
+td, th{border:1px solid #ccc;padding:5px;}
+code{background:#eee;padding:2px 4px;}
+section{margin-bottom:30px;}
 </style>
 </head>
 <body>
-<h2>Hypercore P2P Chat</h2>
-<div id="chat"></div>
-<input id="message" placeholder="Tulis pesan...">
-<button id="send">Kirim</button>
 
-<script type="module">
-// Import Hypercore & SimplePeer via CDN
-import Hypercore from 'https://cdn.jsdelivr.net/npm/hypercore@10.2.1/+esm';
-import ram from 'https://cdn.jsdelivr.net/npm/random-access-memory/+esm';
-import HypercoreProtocol from 'https://cdn.jsdelivr.net/npm/hypercore-protocol@9.0.0/+esm';
-import SimplePeer from 'https://cdn.jsdelivr.net/npm/simple-peer@9.12.0/simplepeer.min.js';
+<h1>Mini Fullstack GAS + Drive Learning</h1>
+<p>Ini adalah panduan belajar membuat **web app sederhana** dengan:</p>
+<ul>
+<li>Frontend HTML + JavaScript</li>
+<li>Backend Google Apps Script (GAS)</li>
+<li>Database sederhana di Google Drive (JSON shard)</li>
+</ul>
 
-// Setup Hypercore di RAM (untuk browser)
-const core = new Hypercore(ram, { valueEncoding: 'json' });
-const chatDiv = document.getElementById('chat');
-const input = document.getElementById('message');
-const sendBtn = document.getElementById('send');
+<hr>
 
-let peers = [];
+<section>
+<h2>1️⃣ Langkah Persiapan Google Apps Script</h2>
+<p>Buka <strong>Google Drive → New → More → Google Apps Script</strong></p>
+<ol>
+<li>Buat project baru, misal: <code>MiniUserDB</code></li>
+<li>Buat file <code>Code.gs</code> dengan isi backend (lihat kode di bawah)</li>
+<li>Deploy sebagai Web App: <em>Deploy → New deployment → Web App → Execute as: Me → Who has access: Anyone</em></li>
+<li>Catat URL Web App, nanti dipakai di frontend</li>
+</ol>
 
-// Tampilkan pesan dari log Hypercore
-function render() {
-  core.createReadStream({ live: true }).on('data', data => {
-    const msg = `[${new Date(data.time).toLocaleTimeString()}] ${data.user}: ${data.text}`;
-    const p = document.createElement('p');
-    p.textContent = msg;
-    chatDiv.appendChild(p);
-    chatDiv.scrollTop = chatDiv.scrollHeight;
+<pre>
+// ========================
+// CONFIG
+// ========================
+const SHARD_SIZE = 1000;
+const FOLDER_NAME = "GAS_UserDB";
+
+// ========================
+// FOLDER & DRIVE HELPERS
+// ========================
+function getFolder(){ 
+  const f = DriveApp.getFoldersByName(FOLDER_NAME);
+  return f.hasNext()? f.next(): DriveApp.createFolder(FOLDER_NAME);
+}
+
+function getShardFile(shardKey){
+  const files = getFolder().getFilesByName(shardKey+".json");
+  return files.hasNext()? files.next(): null;
+}
+
+function saveShard(shardKey,data){
+  const json = JSON.stringify(data);
+  const file = getShardFile(shardKey);
+  if(file) file.setContent(json);
+  else getFolder().createFile(shardKey+".json",json,MimeType.JSON);
+}
+
+function loadShard(shardKey){
+  const file = getShardFile(shardKey);
+  return file ? JSON.parse(file.getBlob().getDataAsString()) : {};
+}
+
+// ========================
+// SHARDING
+// ========================
+function getShardKey(userId){ return "users_"+(Math.floor(userId/SHARD_SIZE)+1); }
+
+// ========================
+// CRUD USER
+// ========================
+function saveUser(userId,data){
+  const shard = loadShard(getShardKey(userId));
+  shard[userId]=data;
+  saveShard(getShardKey(userId),shard);
+}
+
+function getUser(userId){
+  const shard = loadShard(getShardKey(userId));
+  return shard[userId] || null;
+}
+
+// ========================
+// USER MANAGEMENT
+// ========================
+function createUser(userId,username){
+  const now = new Date().getTime();
+  const user = {id:userId, username, posting:[], createdAt:now, lastActive:now};
+  saveUser(userId,user);
+}
+
+function addPosting(userId,konten){
+  const user = getUser(userId);
+  if(!user) return;
+  const now = new Date().getTime();
+  const postId = user.posting.length ? user.posting[user.posting.length-1].id+1 :1;
+  user.posting.push({id:postId,konten,createdAt:now});
+  user.lastActive = now;
+  saveUser(userId,user);
+}
+
+// ========================
+// LIST USERS
+// ========================
+function listUsers(){
+  const folder = getFolder();
+  const files = folder.getFiles();
+  const users = [];
+  while(files.hasNext()){
+    const file = files.next();
+    if(file.getName().endsWith(".json")){
+      const shard = JSON.parse(file.getBlob().getDataAsString());
+      for(let uid in shard){
+        users.push(shard[uid]);
+      }
+    }
+  }
+  return users;
+}
+
+// ========================
+// WEB APP API
+// ========================
+function doGet(){ return ContentService.createTextOutput("Use POST with JSON payload"); }
+
+function doPost(e){
+  const params = JSON.parse(e.postData.contents);
+  let res={status:"error",message:"Unknown action"};
+  switch(params.action){
+    case "createUser": createUser(params.userId,params.username); res={status:"ok"}; break;
+    case "addPosting": addPosting(params.userId,params.konten); res={status:"ok"}; break;
+    case "getUser": res={status:"ok",data:getUser(params.userId)}; break;
+    case "listUsers": res={status:"ok",data:listUsers()}; break;
+  }
+  return ContentService.createTextOutput(JSON.stringify(res))
+        .setMimeType(ContentService.MimeType.JSON);
+}
+</pre>
+<p><em>Ini adalah backend lengkap. Deploy sebagai Web App.</em></p>
+</section>
+
+<section>
+<h2>2️⃣ Frontend HTML</h2>
+<p>Buat file HTML dengan kode berikut, ganti <code>API_URL</code> dengan URL Web App yang tadi dicatat:</p>
+
+<pre>
+&lt;!-- index.html --&gt;
+&lt;!DOCTYPE html&gt;
+&lt;html lang="id"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+  &lt;title&gt;Mini GAS Fullstack Demo&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+
+&lt;h2&gt;Mini GAS Fullstack&lt;/h2&gt;
+
+&lt;input type="number" id="userId" placeholder="User ID"&gt;
+&lt;input type="text" id="username" placeholder="Username"&gt;
+&lt;button onclick="createUser()"&gt;Create User&lt;/button&gt;
+
+&lt;input type="text" id="konten" placeholder="Posting"&gt;
+&lt;button onclick="addPosting()"&gt;Add Posting&lt;/button&gt;
+
+&lt;input type="number" id="getUserId" placeholder="User ID"&gt;
+&lt;button onclick="getUser()"&gt;Get User&lt;/button&gt;
+
+&lt;button onclick="listUsers()"&gt;List Users&lt;/button&gt;
+
+&lt;pre id="output"&gt;&lt;/pre&gt;
+&lt;div id="userTable"&gt;&lt;/div&gt;
+
+&lt;script&gt;
+const API_URL = "PASTE_DEPLOYED_WEB_APP_URL_HERE";
+
+function apiPost(payload, cb){
+  fetch(API_URL,{method:"POST",body:JSON.stringify(payload)})
+    .then(r=>r.json()).then(cb).catch(err=>document.getElementById("output").innerText=err);
+}
+
+function createUser(){
+  const userId = Number(document.getElementById("userId").value);
+  const username = document.getElementById("username").value;
+  apiPost({action:"createUser", userId, username}, r=>{
+    document.getElementById("output").innerText=JSON.stringify(r,null,2);
   });
 }
 
-core.ready().then(() => {
-  render();
-});
-
-// Fungsi kirim pesan
-sendBtn.onclick = async () => {
-  const text = input.value.trim();
-  if(!text) return;
-  const msg = { user: "User"+Math.floor(Math.random()*999), text, time: Date.now() };
-  await core.append(msg); // Append-only log Hypercore
-  broadcast(msg);          // Kirim ke semua peer
-  input.value = '';
-};
-
-// Fungsi broadcast ke peers
-function broadcast(msg){
-  peers.forEach(p=>{
-    if(p.connected) p.send(JSON.stringify(msg));
+function addPosting(){
+  const userId = Number(document.getElementById("userId").value);
+  const konten = document.getElementById("konten").value;
+  apiPost({action:"addPosting", userId, konten}, r=>{
+    document.getElementById("output").innerText=JSON.stringify(r,null,2);
   });
 }
 
-// Tambah peer baru
-function addPeer(peerSignal){
-  const p = new SimplePeer({ initiator: false, trickle: false });
-  p.signal(peerSignal);
-  p.on('signal', s => console.log("Signal to send:", s));
-  p.on('data', data => {
-    const msg = JSON.parse(data.toString());
-    core.append(msg);
+function getUser(){
+  const userId = Number(document.getElementById("getUserId").value);
+  apiPost({action:"getUser", userId}, r=>{
+    document.getElementById("output").innerText=JSON.stringify(r,null,2);
   });
-  peers.push(p);
 }
 
-// Demo: bisa buat initiator peer manual di console
-window.addPeer = addPeer;
+function listUsers(){
+  apiPost({action:"listUsers"}, r=>{
+    document.getElementById("output").innerText=JSON.stringify(r,null,2);
+    renderUserTable(r.data);
+  });
+}
 
-</script>
+function renderUserTable(users){
+  if(!users || !users.length){document.getElementById("userTable").innerHTML="No users";return;}
+  let html = "&lt;table&gt;&lt;tr&gt;&lt;th&gt;ID&lt;/th&gt;&lt;th&gt;Username&lt;/th&gt;&lt;th&gt;Posting&lt;/th&gt;&lt;/tr&gt;";
+  users.forEach(u=>{
+    html+="&lt;tr&gt;&lt;td&gt;"+u.id+"&lt;/td&gt;&lt;td&gt;"+u.username+"&lt;/td&gt;&lt;td&gt;"+(u.posting?u.posting.map(p=>p.konten).join(", "):"")+"&lt;/td&gt;&lt;/tr&gt;";
+  });
+  html+="&lt;/table&gt;";
+  document.getElementById("userTable").innerHTML=html;
+}
+&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+</pre>
+
+</section>
+
+<section>
+<h2>3️⃣ Cara Menggunakan</h2>
+<ol>
+<li>Buka HTML di browser</li>
+<li>Masukkan User ID & Username → klik "Create User"</li>
+<li>Tambah posting → klik "Add Posting"</li>
+<li>Lihat user → masukkan User ID → klik "Get User"</li>
+<li>Lihat semua user → klik "List Users"</li>
+<li>Semua data tersimpan di Google Drive secara shard JSON → belajar konsep database + sharding sederhana</li>
+</ol>
+</section>
+
+<section>
+<h2>4️⃣ Catatan Pembelajaran</h2>
+<ul>
+<li>Backend GAS berfungsi sebagai API sederhana</li>
+<li>Drive menyimpan data JSON → database mini</li>
+<li>Sharding membantu mengatur data ribuan user</li>
+<li>Frontend HTML berkomunikasi via fetch POST → belajar konsep fullstack</li>
+<li>Bisa dikembangkan: hapus user, filter posting, real-time update dengan setInterval</li>
+</ul>
+</section>
+
 </body>
 </html>
