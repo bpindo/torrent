@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>P2P Mobile Ready - Kirim Kode</title>
+<title>P2P Data Input & Viewer</title>
 <style>
   body {margin:0;font-family:system-ui,sans-serif;background:#f4f4f4;padding:10px;}
   .container{max-width:500px;margin:auto;background:#fff;padding:15px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1);}
@@ -20,32 +20,30 @@
 </head>
 <body>
 <div class="container">
-  <input id="kode" placeholder="Masukkan kode atau data JSON (opsional)">
+  <input id="kode" placeholder='Masukkan kode atau JSON (contoh: {"kode":"ABC"})'>
   <div class="btn-group">
-    <button id="kirimBtn">Kirim</button>
+    <button id="kirimBtn">Kirim Data</button>
+    <button id="ambilBtn">Ambil & Salin Data Terakhir</button>
   </div>
-  <button id="ambilBtn">Ambil Data Terakhir</button>
 
   <table>
-    <thead id="tableHead">
-      <tr><th>Waktu</th><th>Kode</th></tr> <!-- Minimal satu kolom default -->
-    </thead>
+    <thead id="tableHead"><tr><th>Waktu</th><th>Kode</th></tr></thead>
     <tbody id="hasil"></tbody>
   </table>
 </div>
 
 <script>
-const API="YOUR_GAS_URL_HERE"; // ganti dengan URL GAS mu
+const API="https://script.google.com/macros/s/AKfycbyqxBmzWdKV9PVxN6g6bHjcBv7peJgbCPtydUy4_4R2r61Gtsx_D1L7Of36T_GIvYvBPw/exec";
 
-// ===== Fungsi Kirim =====
+// ===== Kirim data ke GAS =====
 async function kirim() {
   const kodeInput = document.getElementById("kode");
   let payload = {};
   try {
     if(kodeInput.value.trim()){
-      try{
+      try {
         payload = JSON.parse(kodeInput.value.trim());
-      } catch{
+      } catch {
         payload = {kode: kodeInput.value.trim()};
       }
     }
@@ -54,12 +52,12 @@ async function kirim() {
     if(data.status==="ok"){
       kodeInput.value="";
       alert("Data berhasil dikirim!");
-      ambil(); // refresh tabel
+      ambil();
     } else alert("Gagal kirim: "+data.message);
   } catch(err){console.error(err); alert("Gagal kirim data!");}
 }
 
-// ===== Fungsi Ambil =====
+// ===== Ambil semua data dan tampilkan =====
 async function ambil() {
   try {
     const res = await fetch(API+"?t="+Date.now());
@@ -78,7 +76,7 @@ async function ambil() {
       return;
     }
 
-    // update header otomatis
+    // Update header sesuai data terakhir
     const headers = Object.keys(d[0]);
     theadRow.innerHTML = "";
     headers.forEach(h=>{
@@ -87,7 +85,7 @@ async function ambil() {
       theadRow.appendChild(th);
     });
 
-    // buat row
+    // Buat row tabel
     d.forEach(item=>{
       const tr = document.createElement("tr");
       headers.forEach(h=>{
