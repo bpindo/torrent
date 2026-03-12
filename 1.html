@@ -2,50 +2,163 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mini GAS Fullstack Learning Guide</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Belajar Backend Web: GAS + Drive</title>
+
 <style>
-body{font-family:sans-serif;margin:20px;}
-input, button{margin:5px;padding:5px;}
-pre{background:#f0f0f0;padding:10px;overflow:auto;}
-table{border-collapse:collapse;margin-top:10px;width:100%;}
-td, th{border:1px solid #ccc;padding:5px;}
-code{background:#eee;padding:2px 4px;}
-section{margin-bottom:30px;}
+body{
+  font-family:system-ui,-apple-system,Segoe UI,Roboto;
+  background:#f4f6f9;
+  margin:0;
+  color:#333;
+}
+header{
+  background:#1f2937;
+  color:white;
+  padding:25px;
+  text-align:center;
+}
+header p{
+  opacity:.8;
+  margin-top:5px;
+}
+.container{
+  max-width:1000px;
+  margin:auto;
+  padding:20px;
+}
+.card{
+  background:white;
+  padding:20px;
+  margin-bottom:20px;
+  border-radius:10px;
+  box-shadow:0 5px 15px rgba(0,0,0,.05);
+}
+h2{
+  margin-top:0;
+}
+button,input,textarea{
+  width:100%;
+  padding:10px;
+  margin-top:8px;
+  border-radius:6px;
+  border:1px solid #ccc;
+  font-size:14px;
+}
+button{
+  background:#2563eb;
+  color:white;
+  border:none;
+  cursor:pointer;
+}
+button:hover{
+  background:#1e4fd8;
+}
+pre{
+  background:#f0f0f0;
+  padding:10px;
+  overflow:auto;
+}
+table{
+  border-collapse:collapse;
+  margin-top:10px;
+  width:100%;
+}
+td, th{
+  border:1px solid #ccc;
+  padding:5px;
+}
+.info{
+  font-size:14px;
+  color:#555;
+}
+footer{
+  text-align:center;
+  padding:20px;
+  font-size:13px;
+  color:#777;
+}
 </style>
 </head>
+
 <body>
 
-<h1>Mini Fullstack GAS + Drive Learning</h1>
-<p>Ini adalah panduan belajar membuat **web app sederhana** dengan:</p>
+<header>
+<h1>Belajar Backend Web: GAS + Google Drive</h1>
+<p>Mini LAB interaktif untuk memahami backend + database menggunakan Google Apps Script</p>
+</header>
+
+<div class="container">
+
+<!-- Step 1: Konsep -->
+<div class="card">
+<h2>📖 Konsep Backend GAS + Drive</h2>
+<p class="info">
+Dalam LAB ini, kita akan belajar cara membuat aplikasi web sederhana dengan:
 <ul>
-<li>Frontend HTML + JavaScript</li>
-<li>Backend Google Apps Script (GAS)</li>
-<li>Database sederhana di Google Drive (JSON shard)</li>
+<li>Frontend HTML & JavaScript</li>
+<li>Backend Google Apps Script (GAS) sebagai API</li>
+<li>Database mini di Google Drive (file JSON per shard)</li>
 </ul>
+</p>
+<p class="info">
+Alur sederhana:
+<br>HTML &rarr; request POST &rarr; GAS Web App &rarr; Drive (CRUD JSON)
+</p>
+</div>
 
-<hr>
+<!-- Step 2: API URL -->
+<div class="card">
+<h2>🌐 Setup API URL</h2>
+<p class="info">
+Setelah deploy Web App GAS, masukkan URL di bawah supaya demo bisa berjalan real-time.
+</p>
+<input type="text" id="apiUrl" placeholder="Paste URL Web App GAS di sini">
+<button onclick="setAPI()">Connect API</button>
+<p id="apiInfo" class="info"></p>
+</div>
 
-<section>
-<h2>1️⃣ Langkah Persiapan Google Apps Script</h2>
-<p>Buka <strong>Google Drive → New → More → Google Apps Script</strong></p>
-<ol>
-<li>Buat project baru, misal: <code>MiniUserDB</code></li>
-<li>Buat file <code>Code.gs</code> dengan isi backend (lihat kode di bawah)</li>
-<li>Deploy sebagai Web App: <em>Deploy → New deployment → Web App → Execute as: Me → Who has access: Anyone</em></li>
-<li>Catat URL Web App, nanti dipakai di frontend</li>
-</ol>
+<!-- Step 3: Create User -->
+<div class="card">
+<h2>👤 Create User</h2>
+<input type="number" id="userId" placeholder="User ID">
+<input type="text" id="username" placeholder="Username">
+<button onclick="createUser()">Create User</button>
+<p class="info">Klik untuk membuat user baru di backend GAS.</p>
+</div>
 
+<!-- Step 4: Add Posting -->
+<div class="card">
+<h2>📝 Add Posting</h2>
+<input type="text" id="konten" placeholder="Konten Posting">
+<button onclick="addPosting()">Add Posting</button>
+<p class="info">Tambahkan posting untuk user tertentu.</p>
+</div>
+
+<!-- Step 5: Get User -->
+<div class="card">
+<h2>🔍 Get User</h2>
+<input type="number" id="getUserId" placeholder="User ID">
+<button onclick="getUser()">Get User</button>
+<p class="info">Ambil data user secara real-time dari Drive.</p>
+</div>
+
+<!-- Step 6: List All Users -->
+<div class="card">
+<h2>📋 List All Users</h2>
+<button onclick="listUsers()">List Users</button>
+<div id="userTable"></div>
+<p class="info">Lihat semua user beserta posting. Data diambil langsung dari Drive.</p>
+</div>
+
+<!-- Step 7: Backend Code -->
+<div class="card">
+<h2>💻 Backend GAS Code</h2>
+<p class="info">Ini adalah contoh kode Google Apps Script yang digunakan untuk LAB ini:</p>
 <pre>
-// ========================
-// CONFIG
-// ========================
 const SHARD_SIZE = 1000;
 const FOLDER_NAME = "GAS_UserDB";
 
-// ========================
-// FOLDER & DRIVE HELPERS
-// ========================
 function getFolder(){ 
   const f = DriveApp.getFoldersByName(FOLDER_NAME);
   return f.hasNext()? f.next(): DriveApp.createFolder(FOLDER_NAME);
@@ -68,15 +181,9 @@ function loadShard(shardKey){
   return file ? JSON.parse(file.getBlob().getDataAsString()) : {};
 }
 
-// ========================
-// SHARDING
-// ========================
 function getShardKey(userId){ return "users_"+(Math.floor(userId/SHARD_SIZE)+1); }
 
-// ========================
-// CRUD USER
-// ========================
-function saveUser(userId,data){
+function saveUser(userId,data){ 
   const shard = loadShard(getShardKey(userId));
   shard[userId]=data;
   saveShard(getShardKey(userId),shard);
@@ -87,9 +194,6 @@ function getUser(userId){
   return shard[userId] || null;
 }
 
-// ========================
-// USER MANAGEMENT
-// ========================
 function createUser(userId,username){
   const now = new Date().getTime();
   const user = {id:userId, username, posting:[], createdAt:now, lastActive:now};
@@ -106,9 +210,6 @@ function addPosting(userId,konten){
   saveUser(userId,user);
 }
 
-// ========================
-// LIST USERS
-// ========================
 function listUsers(){
   const folder = getFolder();
   const files = folder.getFiles();
@@ -117,17 +218,12 @@ function listUsers(){
     const file = files.next();
     if(file.getName().endsWith(".json")){
       const shard = JSON.parse(file.getBlob().getDataAsString());
-      for(let uid in shard){
-        users.push(shard[uid]);
-      }
+      for(let uid in shard){ users.push(shard[uid]); }
     }
   }
   return users;
 }
 
-// ========================
-// WEB APP API
-// ========================
 function doGet(){ return ContentService.createTextOutput("Use POST with JSON payload"); }
 
 function doPost(e){
@@ -139,122 +235,80 @@ function doPost(e){
     case "getUser": res={status:"ok",data:getUser(params.userId)}; break;
     case "listUsers": res={status:"ok",data:listUsers()}; break;
   }
-  return ContentService.createTextOutput(JSON.stringify(res))
-        .setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
 }
 </pre>
-<p><em>Ini adalah backend lengkap. Deploy sebagai Web App.</em></p>
-</section>
+</div>
 
-<section>
-<h2>2️⃣ Frontend HTML</h2>
-<p>Buat file HTML dengan kode berikut, ganti <code>API_URL</code> dengan URL Web App yang tadi dicatat:</p>
+</div>
 
-<pre>
-&lt;!-- index.html --&gt;
-&lt;!DOCTYPE html&gt;
-&lt;html lang="id"&gt;
-&lt;head&gt;
-  &lt;meta charset="UTF-8"&gt;
-  &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
-  &lt;title&gt;Mini GAS Fullstack Demo&lt;/title&gt;
-&lt;/head&gt;
-&lt;body&gt;
+<footer>
+LAB Belajar Backend Web • Google Apps Script + Google Drive • Interaktif & Real-Time
+</footer>
 
-&lt;h2&gt;Mini GAS Fullstack&lt;/h2&gt;
+<script>
+// Global API URL
+let API_URL=""
 
-&lt;input type="number" id="userId" placeholder="User ID"&gt;
-&lt;input type="text" id="username" placeholder="Username"&gt;
-&lt;button onclick="createUser()"&gt;Create User&lt;/button&gt;
-
-&lt;input type="text" id="konten" placeholder="Posting"&gt;
-&lt;button onclick="addPosting()"&gt;Add Posting&lt;/button&gt;
-
-&lt;input type="number" id="getUserId" placeholder="User ID"&gt;
-&lt;button onclick="getUser()"&gt;Get User&lt;/button&gt;
-
-&lt;button onclick="listUsers()"&gt;List Users&lt;/button&gt;
-
-&lt;pre id="output"&gt;&lt;/pre&gt;
-&lt;div id="userTable"&gt;&lt;/div&gt;
-
-&lt;script&gt;
-const API_URL = "PASTE_DEPLOYED_WEB_APP_URL_HERE";
-
-function apiPost(payload, cb){
-  fetch(API_URL,{method:"POST",body:JSON.stringify(payload)})
-    .then(r=>r.json()).then(cb).catch(err=>document.getElementById("output").innerText=err);
+// Set API URL
+function setAPI(){
+  API_URL=document.getElementById("apiUrl").value.trim()
+  if(API_URL) document.getElementById("apiInfo").innerText="API connected: "+API_URL
+  else document.getElementById("apiInfo").innerText="Masukkan URL Web App GAS"
 }
 
+// Helper POST request
+function apiPost(payload, cb){
+  if(!API_URL){alert("Masukkan URL API dulu!"); return;}
+  fetch(API_URL,{method:"POST",body:JSON.stringify(payload)})
+    .then(r=>r.json()).then(cb)
+    .catch(err=>document.getElementById("userTable").innerText=err);
+}
+
+// Create User
 function createUser(){
   const userId = Number(document.getElementById("userId").value);
   const username = document.getElementById("username").value;
   apiPost({action:"createUser", userId, username}, r=>{
-    document.getElementById("output").innerText=JSON.stringify(r,null,2);
+    alert("Create User: "+JSON.stringify(r));
   });
 }
 
+// Add Posting
 function addPosting(){
   const userId = Number(document.getElementById("userId").value);
   const konten = document.getElementById("konten").value;
   apiPost({action:"addPosting", userId, konten}, r=>{
-    document.getElementById("output").innerText=JSON.stringify(r,null,2);
+    alert("Add Posting: "+JSON.stringify(r));
   });
 }
 
+// Get User
 function getUser(){
   const userId = Number(document.getElementById("getUserId").value);
   apiPost({action:"getUser", userId}, r=>{
-    document.getElementById("output").innerText=JSON.stringify(r,null,2);
+    document.getElementById("userTable").innerHTML=JSON.stringify(r,null,2);
   });
 }
 
+// List All Users
 function listUsers(){
   apiPost({action:"listUsers"}, r=>{
-    document.getElementById("output").innerText=JSON.stringify(r,null,2);
     renderUserTable(r.data);
   });
 }
 
+// Render Table
 function renderUserTable(users){
-  if(!users || !users.length){document.getElementById("userTable").innerHTML="No users";return;}
-  let html = "&lt;table&gt;&lt;tr&gt;&lt;th&gt;ID&lt;/th&gt;&lt;th&gt;Username&lt;/th&gt;&lt;th&gt;Posting&lt;/th&gt;&lt;/tr&gt;";
+  if(!users || !users.length){document.getElementById("userTable").innerHTML="No users"; return;}
+  let html = "<table><tr><th>ID</th><th>Username</th><th>Posting</th></tr>";
   users.forEach(u=>{
-    html+="&lt;tr&gt;&lt;td&gt;"+u.id+"&lt;/td&gt;&lt;td&gt;"+u.username+"&lt;/td&gt;&lt;td&gt;"+(u.posting?u.posting.map(p=>p.konten).join(", "):"")+"&lt;/td&gt;&lt;/tr&gt;";
+    html+="<tr><td>"+u.id+"</td><td>"+u.username+"</td><td>"+(u.posting?u.posting.map(p=>p.konten).join(", "):"")+"</td></tr>";
   });
-  html+="&lt;/table&gt;";
+  html+="</table>";
   document.getElementById("userTable").innerHTML=html;
 }
-&lt;/script&gt;
-
-&lt;/body&gt;
-&lt;/html&gt;
-</pre>
-
-</section>
-
-<section>
-<h2>3️⃣ Cara Menggunakan</h2>
-<ol>
-<li>Buka HTML di browser</li>
-<li>Masukkan User ID & Username → klik "Create User"</li>
-<li>Tambah posting → klik "Add Posting"</li>
-<li>Lihat user → masukkan User ID → klik "Get User"</li>
-<li>Lihat semua user → klik "List Users"</li>
-<li>Semua data tersimpan di Google Drive secara shard JSON → belajar konsep database + sharding sederhana</li>
-</ol>
-</section>
-
-<section>
-<h2>4️⃣ Catatan Pembelajaran</h2>
-<ul>
-<li>Backend GAS berfungsi sebagai API sederhana</li>
-<li>Drive menyimpan data JSON → database mini</li>
-<li>Sharding membantu mengatur data ribuan user</li>
-<li>Frontend HTML berkomunikasi via fetch POST → belajar konsep fullstack</li>
-<li>Bisa dikembangkan: hapus user, filter posting, real-time update dengan setInterval</li>
-</ul>
-</section>
+</script>
 
 </body>
 </html>
