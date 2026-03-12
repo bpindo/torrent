@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Live HTML/JS Editor Maksimal</title>
+<title>Live HTML/JS Editor Final</title>
 <style>
   body, html {
     margin: 0;
@@ -33,9 +33,14 @@
   button {
     margin-top: 10px;
     margin-right: 5px;
-    padding: 8px 16px;
+    padding: 6px 14px;
     font-size: 14px;
     cursor: pointer;
+  }
+  select {
+    margin-top: 10px;
+    padding: 5px 8px;
+    font-size: 14px;
   }
   #output {
     flex-grow: 1;
@@ -48,17 +53,28 @@
 
 <div id="editorContainer">
   <button onclick="toggleEditor()">🔽 Toggle Input</button>
-  <br>
+  
   <textarea id="codeInput" placeholder="Tulis kode HTML/JS di sini..."></textarea>
   <br>
   <button onclick="pasteCode()">📋 Paste</button>
   <button onclick="runCode()">▶️ Run</button>
   <button onclick="clearCode()">🗑️ Clear</button>
+  <button onclick="saveProject()">💾 Save</button>
+  <button onclick="saveAsProject()">💾 Save As</button>
+
+  <br><br>
+  <label for="projectSelect">Buka Proyek:</label>
+  <select id="projectSelect" onchange="loadSelectedProject()">
+    <option value="">-- Pilih proyek --</option>
+  </select>
+  <button onclick="deleteProject()">❌ Hapus Proyek</button>
 </div>
 
 <iframe id="output"></iframe>
 
 <script>
+let defaultProjectCounter = 1;
+
 // Jalankan kode di iframe
 function runCode() {
   const code = document.getElementById('codeInput').value;
@@ -81,15 +97,78 @@ async function pasteCode() {
   }
 }
 
-// Toggle lipat/buka textarea
+// Toggle lipat/buka textarea dan semua tombol kecuali toggle
 function toggleEditor() {
-  const editor = document.getElementById('codeInput');
-  if (editor.style.display === 'none') {
-    editor.style.display = 'block';
-  } else {
-    editor.style.display = 'none';
+  const editorContainer = document.getElementById('editorContainer');
+  const children = Array.from(editorContainer.children);
+  
+  children.forEach(el => {
+    if (el.tagName !== 'BUTTON' || !el.textContent.includes('Toggle Input')) {
+      el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+    }
+  });
+}
+
+// Save default project
+function saveProject() {
+  const code = document.getElementById('codeInput').value;
+  if (!code.trim()) { alert('Kode kosong!'); return; }
+  const name = 'project' + defaultProjectCounter;
+  localStorage.setItem(name, code);
+  defaultProjectCounter++;
+  alert(`Proyek tersimpan sebagai "${name}"`);
+  updateProjectList();
+}
+
+// Save As project
+function saveAsProject() {
+  const code = document.getElementById('codeInput').value;
+  if (!code.trim()) { alert('Kode kosong!'); return; }
+  const name = prompt('Masukkan nama proyek:', 'project_custom');
+  if (!name) return;
+  localStorage.setItem(name, code);
+  alert(`Proyek tersimpan sebagai "${name}"`);
+  updateProjectList();
+}
+
+// Load project dari dropdown
+function loadSelectedProject() {
+  const select = document.getElementById('projectSelect');
+  const name = select.value;
+  if (!name) return;
+  const code = localStorage.getItem(name);
+  if (code !== null) {
+    document.getElementById('codeInput').value = code;
+    runCode();
   }
 }
+
+// Hapus proyek terpilih
+function deleteProject() {
+  const select = document.getElementById('projectSelect');
+  const name = select.value;
+  if (!name) { alert('Pilih proyek terlebih dahulu!'); return; }
+  if (confirm(`Yakin ingin menghapus proyek "${name}"?`)) {
+    localStorage.removeItem(name);
+    alert(`Proyek "${name}" telah dihapus`);
+    updateProjectList();
+  }
+}
+
+// Update dropdown proyek
+function updateProjectList() {
+  const select = document.getElementById('projectSelect');
+  select.innerHTML = '<option value="">-- Pilih proyek --</option>';
+  Object.keys(localStorage).forEach(key => {
+    const option = document.createElement('option');
+    option.value = key;
+    option.textContent = key;
+    select.appendChild(option);
+  });
+}
+
+// Inisialisasi
+updateProjectList();
 </script>
 
 </body>
