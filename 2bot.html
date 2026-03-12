@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>P2P Data Input & Viewer - Linux Timestamp & Auto-Adapt Kolom</title>
+<title>Demo Auto-Adapt Kolom</title>
 <style>
   body {margin:0;font-family:system-ui,sans-serif;background:#f4f4f4;padding:10px;}
-  .container{max-width:500px;margin:auto;background:#fff;padding:15px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1);}
+  .container{max-width:600px;margin:auto;background:#fff;padding:15px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1);}
   input,button{width:100%;padding:12px;margin:6px 0;font-size:16px;border-radius:6px;border:1px solid #ccc;box-sizing:border-box;}
   button{background-color:#4CAF50;color:white;border:none;cursor:pointer;}
   button:hover{background-color:#45a049;}
@@ -20,7 +20,8 @@
 </head>
 <body>
 <div class="container">
-  <input id="kode" placeholder='Masukkan kode atau JSON (contoh: {"kode":"ABC"})'>
+  <h3>Demo Input JSON – Auto-Adapt Kolom</h3>
+  <input id="kode" placeholder='Masukkan kode atau JSON, contoh: {"kode":"ABC"}'>
   <div class="btn-group">
     <button id="kirimBtn">Kirim Data</button>
     <button id="ambilBtn">Ambil & Salin Data Terakhir</button>
@@ -41,11 +42,8 @@ async function kirim() {
   let payload = {};
   try {
     if(kodeInput.value.trim()){
-      try {
-        payload = JSON.parse(kodeInput.value.trim());
-      } catch {
-        payload = {kode: kodeInput.value.trim()};
-      }
+      try { payload = JSON.parse(kodeInput.value.trim()); }
+      catch { payload = {kode: kodeInput.value.trim()}; }
     }
     const res = await fetch(API, {method:"POST", body:JSON.stringify(payload)});
     const data = await res.json();
@@ -57,7 +55,7 @@ async function kirim() {
   } catch(err){console.error(err); alert("Gagal kirim data!");}
 }
 
-// ===== Ambil semua data dan tampilkan auto-adapt kolom =====
+// ===== Ambil semua data dan auto-adapt kolom =====
 async function ambil() {
   try {
     const res = await fetch(API+"?t="+Date.now());
@@ -74,7 +72,7 @@ async function ambil() {
 
     // Cari semua key unik dari seluruh data (auto-adapt kolom)
     const allKeys = new Set();
-    d.forEach(item=>Object.keys(item).forEach(k=>allKeys.add(k)));
+    d.forEach(item => Object.keys(item).forEach(k => allKeys.add(k)));
     const headers = Array.from(allKeys);
 
     // Update header
@@ -113,6 +111,24 @@ document.getElementById("ambilBtn").addEventListener("click", async ()=>{
 // ===== Auto refresh =====
 ambil();
 setInterval(ambil,3000);
+
+// ===== Contoh input JSON demo =====
+const contohInputs = [
+  '{"kode":"ABC123"}',
+  '{"kode":"DEF456","peerId":"XYZ789"}',
+  '{"kode":"GHI789","peerId":"LMN456","status":"aktif"}',
+  '{"kode":"JKL321","peerId":"OPQ123","status":"nonaktif","lokasi":"Jakarta"}',
+  '{"kode":"MNO654","peerId":"RST789","status":"aktif","lokasi":"Bandung","catatan":"urgent"}'
+];
+
+// Auto kirim contoh demo satu per satu tiap 1 detik
+let indexDemo=0;
+const intervalDemo = setInterval(()=>{
+  if(indexDemo>=contohInputs.length){ clearInterval(intervalDemo); return; }
+  document.getElementById("kode").value=contohInputs[indexDemo];
+  kirim();
+  indexDemo++;
+}, 1000);
 </script>
 </body>
 </html>
