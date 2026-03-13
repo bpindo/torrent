@@ -41,73 +41,80 @@ button:hover { background:#1e40af; }
 }
 
 /* Komentar author profil lebih menonjol */
-#profil .comment-card {
-  background:#e0f2fe;
-  border-left:4px solid #2563eb;
-  padding:12px;
-  margin-bottom:10px;
-}
-#profil .comment-card button {
-  background:#10b981; color:white;
-}
-/* TAB COMMENTS LAYOUT */
-#comments .form-card {
-  display:flex;
-  flex-direction:column;
-  gap:12px;
-}
-#comments .post-original {
-  background:#fff;
-  border-radius:12px;
-  padding:16px;
-  box-shadow:0 3px 10px rgba(0,0,0,0.08);
-}
-#comments .post-original .feed-title {
-  font-size:18px; font-weight:700; margin-bottom:6px;
-}
-#comments .post-original .feed-author {
-  font-weight:600; color:#2563eb; margin-bottom:6px;
-}
-#comments .post-original a {
-  color:#10b981; text-decoration:underline;
-}
-
-.comment-card {
+/* KOMENTAR SUPER RAPI */
+.comment-card{
   display:flex;
   gap:10px;
-  background:#f3f4f6;
-  border-radius:8px;
-  padding:10px;
+  background:#f9fafb;
+  border-radius:10px;
+  padding:12px;
+  margin-bottom:8px;
+  border:1px solid #e5e7eb;
   align-items:flex-start;
-  box-shadow:0 1px 4px rgba(0,0,0,0.06);
+  transition: all 0.2s;
 }
-.comment-card .icon-author {
-  font-size:20px;
+.comment-card:hover{
+  background:#f3f4f6;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1);
+}
+
+.comment-avatar{
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  background:#2563eb;
+  color:white;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:14px;
+  font-weight:bold;
   flex-shrink:0;
 }
-.comment-card .comment-body {
-  display:flex;
-  flex-direction:column;
-  gap:4px;
-}
-.comment-card .comment-author {
-  font-weight:600; color:#2563eb;
-}
-.comment-card .comment-text {
-  font-size:14px; color:#4b5563;
+
+.comment-body{
+  flex:1;
 }
 
-#comments textarea {
-  resize:none;
-  height:60px;
-  border-radius:8px;
-  border:1px solid #d1d5db;
-  padding:8px;
+.comment-author{
+  font-weight:600;
+  color:#1f2937;
+  font-size:14px;
 }
-#comments button {
+
+.comment-text{
+  margin-top:2px;
+  font-size:14px;
+  color:#374151;
+  line-height:1.4;
+}
+
+.comment-actions{
   margin-top:6px;
+  display:flex;
+  gap:12px;
 }
 
+.comment-actions button{
+  background:none;
+  border:none;
+  font-size:13px;
+  font-weight:600;
+  color:#2563eb;
+  cursor:pointer;
+  padding:0;
+}
+
+.comment-actions button:hover{
+  text-decoration:underline;
+}
+
+/* garis thread reply */
+.comment-reply{
+  border-left:2px solid #e5e7eb;
+  margin-left:20px;
+  padding-left:12px;
+}
 @media (max-width:480px) {
   .tabs { flex-direction:column; }
   .tab-btn { margin:4px 0; }
@@ -323,24 +330,47 @@ async function kirimKomentar(postIndex, parentId = null){
 
 function renderCommentsRecursive(comments, postIndex, level = 0){
   let html = "";
+
   comments.forEach(c => {
+
+    const initial = c.author.charAt(0).toUpperCase();
+
     html += `
-      <div class="comment-card" style="margin-left:${level * 20}px;" data-comment-id="${c.id}">
-        <div class="icon-author">👤</div>
-        <div class="comment-body">
-          <div class="comment-author">${c.author}</div>
-          <div class="comment-text">${c.text}</div>
-          <div style="margin-top:4px;">
-            <button class="open-btn" style="width:90px;margin-right:4px;" onclick="scrollToPost(${postIndex})">Lihat Post</button>
-            <button class="open-btn" style="width:90px;" onclick="replyToComment(${postIndex}, ${c.id})">Balas</button>
+      <div class="${level>0?'comment-reply':''}">
+        <div class="comment-card" data-author="${c.author}" data-comment-id="${c.id}">
+          
+          <div class="comment-avatar">${initial}</div>
+
+          <div class="comment-body">
+            
+            <div class="comment-author">${c.author}</div>
+
+            <div class="comment-text">
+              ${c.text}
+            </div>
+
+            <div class="comment-actions">
+              <button onclick="replyToComment(${postIndex}, ${c.id})">
+                ↩ Balas
+              </button>
+
+              <button onclick="scrollToPost(${postIndex})">
+                Lihat Post
+              </button>
+            </div>
+
           </div>
+
         </div>
       </div>
     `;
-    if(c.replies.length > 0){
-      html += renderCommentsRecursive(c.replies, postIndex, level + 1);
+
+    if(c.replies && c.replies.length > 0){
+      html += renderCommentsRecursive(c.replies, postIndex, level+1);
     }
+
   });
+
   return html;
 }
 
