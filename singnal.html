@@ -1,145 +1,622 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Simple-Peer P2P Chat Example</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Share Link Affiliate - GAS</title>
 <style>
-  body {
-    font-family: monospace;
-    background: #111;
-    color: #0f0;
-    padding: 15px;
-  }
-  textarea, input, button {
-    width: 100%;
-    font-family: monospace;
-    background: #000;
-    color: #0f0;
-    border: 1px solid #0f0;
-    margin: 8px 0;
-    padding: 8px;
-    box-sizing: border-box;
-  }
-  button {
-    cursor: pointer;
-  }
-  pre {
-    background: #000;
-    padding: 10px;
-    height: 200px;
-    overflow-y: auto;
-    white-space: pre-wrap;
-  }
-  .btn-row {
-    display: flex;
-    gap: 8px;
-  }
-  .btn-row button {
-    flex: 1;
-  }
+body { font-family: system-ui; background: #f2f4f8; margin:0; padding:12px;}
+.container { max-width: 700px; margin:auto; }
+h1 { text-align: center; margin-bottom: 12px; color: #1f2937; }
+.tabs { display:flex; justify-content:space-around; margin-bottom:15px; }
+.tab-btn { flex:1; text-align:center; padding:10px 0; cursor:pointer; border-radius:8px; background:#e5e7eb; font-weight:600; margin:0 3px; }
+.tab-btn.active { background:#2563eb; color:white; }
+.tab-content { display:none; }
+.tab-content.active { display:block; }
+.form-card, .feed-card { background:#fff; border-radius:12px; padding:20px; box-shadow:0 3px 10px rgba(0,0,0,0.08); margin-bottom:15px; }
+label { font-size:14px; font-weight:600; margin-top:10px; display:block; }
+input, textarea { width:100%; padding:12px; margin-top:6px; margin-bottom:12px; border-radius:8px; border:1px solid #d1d5db; font-size:14px; box-sizing:border-box; }
+textarea { resize:none; height:80px; }
+button { background:#2563eb; color:white; border:none; padding:12px; width:100%; font-size:15px; font-weight:600; border-radius:8px; cursor:pointer; margin-top:6px; }
+button:hover { background:#1e40af; }
+.feed-title { font-size:16px; font-weight:700; margin-bottom:6px; color:#111827; }
+.feed-desc { font-size:14px; color:#4b5563; margin-bottom:8px; }
+.feed-author::before { content: "👤 "; }
+.feed-author { font-weight: 600; color: #2563eb; padding: 2px 8px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+.feed-author:hover { background: #2563eb; color: white; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+.open-btn, .comment-btn { padding:10px 14px; border:none; border-radius:8px; cursor:pointer; font-weight:600; width:48%; margin-right:2%; }
+.open-btn { background:#10b981; color:white; }
+.open-btn:hover { background:#059669; }
+.comment-btn { background:#2563eb; color:white; }
+.comment-btn:hover { background:#1e40af; }
+.comment-card { background:#f3f4f6; border-radius:8px; padding:10px; margin-bottom:8px; }
+.pagination { text-align:center; margin-top:18px; }
+.page-btn { display:inline-block; padding:6px 12px; margin:3px; background:#e5e7eb; border-radius:6px; cursor:pointer; font-size:14px; }
+.page-btn.active { background:#2563eb; color:white; }
+/* Hover effect feed-card di profil */
+#profil .feed-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  transition: all 0.2s;
+}
+
+/* Komentar author profil lebih menonjol */
+#profil .comment-card {
+  background:#e0f2fe;
+  border-left:4px solid #2563eb;
+  padding:12px;
+  margin-bottom:10px;
+}
+#profil .comment-card button {
+  background:#10b981; color:white;
+}
+/* TAB COMMENTS LAYOUT */
+#comments .form-card {
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+#comments .post-original {
+  background:#fff;
+  border-radius:12px;
+  padding:16px;
+  box-shadow:0 3px 10px rgba(0,0,0,0.08);
+}
+#comments .post-original .feed-title {
+  font-size:18px; font-weight:700; margin-bottom:6px;
+}
+#comments .post-original .feed-author {
+  font-weight:600; color:#2563eb; margin-bottom:6px;
+}
+#comments .post-original a {
+  color:#10b981; text-decoration:underline;
+}
+
+.comment-card {
+  display:flex;
+  gap:10px;
+  background:#f3f4f6;
+  border-radius:8px;
+  padding:10px;
+  align-items:flex-start;
+  box-shadow:0 1px 4px rgba(0,0,0,0.06);
+}
+.comment-card .icon-author {
+  font-size:20px;
+  flex-shrink:0;
+}
+.comment-card .comment-body {
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.comment-card .comment-author {
+  font-weight:600; color:#2563eb;
+}
+.comment-card .comment-text {
+  font-size:14px; color:#4b5563;
+}
+
+#comments textarea {
+  resize:none;
+  height:60px;
+  border-radius:8px;
+  border:1px solid #d1d5db;
+  padding:8px;
+}
+#comments button {
+  margin-top:6px;
+}
+
+@media (max-width:480px) {
+  .tabs { flex-direction:column; }
+  .tab-btn { margin:4px 0; }
+  .open-btn, .comment-btn { width:100%; margin-right:0; margin-bottom:6px; }
+}
 </style>
 </head>
 <body>
+<div class="container">
+<h1>Share Link Affiliate</h1>
+<div class="tabs">
+  <div class="tab-btn active" onclick="openTab('home')">Home</div>
+  <div class="tab-btn" onclick="openTab('posting')">Posting</div>
+  <div class="tab-btn" onclick="openTab('mydata')">Data Saya</div>
+  <div class="tab-btn" onclick="openTab('tentang')">Tentang</div>
+</div>
 
-<h2>🌐 Simple-Peer Manual Signaling Chat</h2>
+<div id="home" class="tab-content active">
+  <div class="form-card">
+    <h2>Selamat Datang di Dunia Share Link!</h2>
+<p>
+  🌟 Selamat datang di platform <strong>share link super praktis & gratis</strong>!  
+  Di sini, Anda bisa membagikan link produk affiliate, video YouTube, TikTok, Shopee, dan konten favorit lainnya dengan mudah.  
+  Buat postingan menarik dalam hitungan detik, simpan di web ini, dan bagikan ke teman, keluarga, atau media sosial Anda tanpa batas.  
+  Semua postingan tersimpan aman di server kami, responsif di HP maupun desktop, dan siap membantu Anda menjangkau lebih banyak audiens.  
+  💡 Temukan ide, lihat tren terbaru, dan tingkatkan visibilitas konten Anda dengan cara yang menyenangkan dan efisien.  
+  Semua gratis, mudah, dan cepat — sempurna untuk siapa saja yang ingin berbagi informasi dengan cepat! 🚀
+</p>
+  </div>
+  <div id="home-feed"></div>
+  <div class="pagination" id="home-pagination"></div>
+</div>
 
-<div>
-  <strong>1️⃣ Pilih Mode</strong><br/>
-  <div class="btn-row">
-    <button onclick="start(true)">Start sebagai Initiator (A)</button>
-    <button onclick="start(false)">Start sebagai Receiver (B/C)</button>
+<div id="posting" class="tab-content">
+  <div class="form-card">
+    <label>Judul *</label>
+    <input id="judul" placeholder="Masukkan judul">
+    <label>Keterangan (max 160 karakter)</label>
+    <textarea id="ket" maxlength="160" placeholder="Masukkan deskripsi singkat"></textarea>
+    <label>Link *</label>
+    <input id="link" placeholder="Masukkan link Shopee/TikTok/YouTube">
+    <div id="author-display" style="margin-bottom:8px; font-weight:600; color:#374151;"></div>
+    <button onclick="tambahPost()">Posting</button>
   </div>
 </div>
 
-<div>
-  <strong>2️⃣ Tukar Signaling</strong><br/>
-  <textarea id="signal" rows="8" placeholder="Copy/Paste signaling JSON disini..."></textarea>
-  <button onclick="applySignal()">Apply Signal</button>
+<div id="mydata" class="tab-content">
+  <div id="my-feed"></div>
 </div>
 
-<div>
-  <strong>3️⃣ Kirim Pesan</strong><br/>
-  <input type="text" id="messageInput" placeholder="Tulis pesan di sini..." />
-  <button onclick="sendMessage()">Kirim Pesan</button>
+<div id="tentang" class="tab-content">
+  <div class="form-card">
+ <h2>Tentang Web Ini</h2>
+<p>
+  🌐 Web ini dibuat sepenuhnya menggunakan <strong>HTML, CSS, dan JavaScript</strong>, tanpa aplikasi tambahan, sehingga cepat, ringan, dan responsif di semua perangkat, termasuk smartphone.  
+
+  💾 Semua postingan, komentar, dan aktivitas pengguna tersimpan di <strong>Google Apps Script (GAS)</strong>, bukan di localStorage, sehingga aman, terpusat, dan dapat diakses dari mana saja.  
+  Anda tidak perlu khawatir kehilangan data atau postingan, semuanya disimpan rapi dan dapat dikelola dengan mudah.  
+
+  🚀 Tujuan web ini adalah memberikan pengalaman berbagi link terbaik: mulai dari produk affiliate, video YouTube, TikTok, hingga link Shopee.  
+  Fitur-fitur unggulan:  
+  - Membuat dan membagikan postingan dengan cepat.  
+  - Melihat, mengedit, dan menghapus postingan dengan mudah.  
+  - Menambahkan komentar serta melihat interaksi pengguna lain.  
+  - Tampilan responsif yang nyaman untuk HP maupun desktop.  
+
+  🔒 Dengan sistem terpusat dan aman, web ini memastikan semua konten Anda terlindungi, mudah dicari, dan selalu tersedia.  
+  Ini bukan sekadar tempat share link, tetapi juga platform untuk membangun interaksi, berbagi informasi, dan mengelola konten Anda dengan profesional.  
+
+  🌟 Nikmati kemudahan berbagi, keamanan data, dan kontrol penuh atas semua postingan Anda di satu tempat.  
+  Web ini dirancang untuk siapa saja yang ingin berbagi konten dengan praktis, aman, dan menyenangkan!
+</p>
+  </div>
 </div>
 
-<div>
-  <strong>📡 Log Pesan & Sistem</strong>
-  <pre id="log"></pre>
+<div id="profil" class="tab-content">
+  <div id="profil-feed"></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/simple-peer@9/simplepeer.min.js"></script>
+<div id="comments" class="tab-content">
+  <div id="comment-feed"></div>
+</div>
+
+</div>
+
 <script>
-  let peer = null;
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwzsIy_r8hsXjIH7nt2VgxETeM86kipahJCMPMLLAzgenyjWc-SrkxTRwI-uym1-Qws/exec";
 
-  function log(msg) {
-    const logEl = document.getElementById('log');
-    logEl.textContent += msg + "\n";
-    logEl.scrollTop = logEl.scrollHeight;
+// TAB
+function openTab(tabName){
+  document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
+  const tabBtn = document.querySelector(`.tab-btn[onclick="openTab('${tabName}')"]`);
+  if(tabBtn) tabBtn.classList.add('active');
+  document.getElementById(tabName).classList.add('active');
+}
+
+// USERNAME
+function generateUsername(){
+  const firstNames = ["Riko","Budi","Sari","Tari","Andi","Dina","Rina","Joko","Lili","Dedi"];
+  const lastNames = ["Jaya","Putra","Sari","Lestari","Wijaya","Santoso","Pratama","Hidayat","Saputra","Rahma"];
+  const num = Math.floor(1000 + Math.random()*9000);
+  return firstNames[Math.floor(Math.random()*firstNames.length)] + lastNames[Math.floor(Math.random()*lastNames.length)] + num;
+}
+let username = localStorage.getItem("visitorUsername");
+if(!username){
+  username = generateUsername();
+  localStorage.setItem("visitorUsername", username);
+}
+document.getElementById("author-display").innerText = "Author: " + username;
+
+// DATA
+let posts = [];
+let currentPage = 1;
+let perPage = 10;
+
+// FETCH DATA DARI GAS
+async function fetchPosts(){
+  try{
+    const resp = await fetch(GAS_URL, {method:"POST", body: JSON.stringify({read:true})});
+    const data = await resp.json();
+    posts = data || [];
+    posts.forEach(p=>{ if(!p.comments)p.comments=[]; });
+    renderHomeFeed();
+    renderMyFeed();
+  } catch(err){ console.error(err); alert("Gagal ambil data dari server."); }
+}
+
+// TAMBAH POST
+async function tambahPost(){
+  const judul = document.getElementById("judul").value.trim();
+  const ket = document.getElementById("ket").value.trim();
+  const link = document.getElementById("link").value.trim();
+  if(!judul||!link){ showNotif("Judul dan link wajib diisi","#ef4444"); return; }
+  const entry = {judul, ket, link, author: username, comments: []};
+  try{
+    const resp = await fetch(GAS_URL, {method:"POST", body:JSON.stringify(entry)});
+    const res = await resp.json();
+    if(res.status==="ok"){
+      document.getElementById("judul").value="";
+      document.getElementById("ket").value="";
+      document.getElementById("link").value="";
+      fetchPosts();
+      showNotif("Posting berhasil disimpan!","#10b981");
+    } else { alert(res.message); }
+  } catch(err){ console.error(err); alert("Gagal menyimpan postingan."); }
+}
+
+// NOTIF
+function showNotif(text,color){
+  let notif=document.createElement("div");
+  notif.innerText=text;
+  notif.style.background=color;
+  notif.style.color="white";
+  notif.style.padding="10px";
+  notif.style.borderRadius="8px";
+  notif.style.marginTop="10px";
+  notif.style.textAlign="center";
+  notif.style.fontWeight="600";
+  const formCard=document.querySelector("#posting .form-card");
+  formCard.appendChild(notif);
+  setTimeout(()=>{notif.remove();},2500);
+}
+
+// KOMENTAR
+let commentIdCounter = 1; // Inisialisasi global untuk unique ID
+
+async function kirimKomentar(postIndex, parentId = null){
+  const txt = document.getElementById('new-comment').value.trim();
+  if(!txt){ alert("Komentar tidak boleh kosong!"); return; }
+
+  const post = posts[postIndex];
+
+  // Buat objek komentar baru
+  const newComment = {
+    id: commentIdCounter++, // id unik
+    author: username,
+    text: txt,
+    replies: []
+  };
+
+  // Jika parentId null, berarti komentar langsung ke post
+  if(parentId === null){
+    post.comments.push(newComment);
+  } else {
+    // Cari komentar parent secara recursive
+    function addReply(comments){
+      for(let c of comments){
+        if(c.id === parentId){
+          c.replies.push(newComment);
+          return true;
+        }
+        if(c.replies.length > 0){
+          if(addReply(c.replies)) return true;
+        }
+      }
+      return false;
+    }
+    addReply(post.comments);
   }
 
-  function start(initiator) {
-    if (peer) {
-      peer.destroy();
-      peer = null;
-      log('### Peer sebelumnya dihancurkan');
+  try{
+    // Simpan ke GAS
+    const resp = await fetch(GAS_URL, {method:"POST", body:JSON.stringify({editIndex: postIndex, comments: post.comments})});
+    const res = await resp.json();
+    if(res.status==="ok"){
+      document.getElementById('new-comment').value = "";
+      openComments(postIndex); // refresh tab komentar
+      fetchPosts(); // refresh feed dan profil
+    } else alert(res.message);
+  } catch(err){ console.error(err); alert("Gagal menyimpan komentar."); }
+}
+
+function renderCommentsRecursive(comments, postIndex, level = 0){
+  let html = "";
+  comments.forEach(c => {
+    html += `
+      <div class="comment-card" style="margin-left:${level * 20}px;" data-comment-id="${c.id}">
+        <div class="icon-author">👤</div>
+        <div class="comment-body">
+          <div class="comment-author">${c.author}</div>
+          <div class="comment-text">${c.text}</div>
+          <div style="margin-top:4px;">
+            <button class="open-btn" style="width:90px;margin-right:4px;" onclick="scrollToPost(${postIndex})">Lihat Post</button>
+            <button class="open-btn" style="width:90px;" onclick="replyToComment(${postIndex}, ${c.id})">Balas</button>
+          </div>
+        </div>
+      </div>
+    `;
+    if(c.replies.length > 0){
+      html += renderCommentsRecursive(c.replies, postIndex, level + 1);
     }
-    peer = new SimplePeer({ initiator, trickle: false });
+  });
+  return html;
+}
 
-    peer.on('signal', data => {
-      document.getElementById('signal').value = JSON.stringify(data, null, 2);
-      log(`### Signal dibuat (salin & kirim ke peer lain)`);
+// RENDER HOME FEED
+function renderHomeFeed(){
+  const feedContainer = document.getElementById('home-feed');
+  const start = (currentPage-1)*perPage;
+  const sliceData = posts.slice(start,start+perPage);
+  let html = "";
+  sliceData.forEach((p, idx)=>{
+    const globalIndex = posts.indexOf(p);
+    html += `
+      <div class="feed-card" id="post-${globalIndex}">
+        <div class="feed-author" onclick="showAuthorProfile('${p.author}')">${p.author}</div>
+        <div class="feed-title">${p.judul}</div>
+        ${p.ket ? `<div class="feed-desc">${p.ket}</div>` : ""}
+        <div style="display:flex; gap:4%;">
+          <button class="comment-btn" style="flex:1;" onclick="openComments(${globalIndex})">
+            Komentar (${p.comments.length})
+          </button>
+          <button class="open-btn" style="flex:1;" onclick="window.open('${p.link}','_blank')">Buka Link</button>
+        </div>
+      </div>
+    `;
+  });
+  feedContainer.innerHTML = html;
+
+  // pagination
+  const paginationEl = document.getElementById('home-pagination');
+  const totalPage = Math.ceil(posts.length/perPage);
+  if(posts.length>perPage){
+    let htmlPage="";
+    for(let i=1;i<=totalPage;i++){
+      htmlPage+=`<span class="page-btn ${i==currentPage?"active":""}" onclick="gotoHomePage(${i})">${i}</span>`;
+    }
+    paginationEl.innerHTML=htmlPage;
+  } else paginationEl.innerHTML="";
+}
+function gotoHomePage(p){ currentPage=p; renderHomeFeed(); }
+
+// RENDER MY FEED
+function renderMyFeed(){
+  const myFeed = document.getElementById('my-feed');
+  const myPosts = posts.filter(p => p.author === username);
+  
+  // Ambil komentar user
+  let myComments = [];
+  posts.forEach((p, idx) => {
+    p.comments.forEach(c => {
+      if(c.author === username){
+        myComments.push({...c, postIndex: idx});
+      }
     });
+  });
 
-    peer.on('connect', () => {
-      log('✅ CONNECTED - Sekarang bisa kirim pesan');
+  let html = "";
+
+  // Tampilkan postingan sendiri
+  myPosts.forEach(p=>{
+    const globalIndex = posts.indexOf(p);
+    html+=`
+      <div class="feed-card" id="post-${globalIndex}">
+        <div class="feed-author">${p.author}</div>
+        <div class="feed-title">${p.judul}</div>
+        ${p.ket? `<div class="feed-desc">${p.ket}</div>` : ""}
+        <div style="display:flex; gap:4%;">
+          <button class="comment-btn" style="flex:1;" onclick="openComments(${globalIndex})">
+            Komentar (${p.comments.length})
+          </button>
+          <button class="open-btn" style="flex:1;" onclick="window.open('${p.link}','_blank')">Buka Link</button>
+        </div>
+        <button style="background:#2563eb;margin-top:6px;" onclick="openEditForm(${globalIndex})">Edit</button>
+        <button style="background:#ef4444;margin-top:6px;" onclick="hapusPost(${globalIndex})">Hapus</button>
+      </div>
+    `;
+  });
+
+  // Tampilkan komentar user
+  if(myComments.length > 0){
+    html += `<h3>Komentar Saya:</h3>`;
+    myComments.forEach(c=>{
+      html += `
+        <div class="feed-card">
+          <div><strong>Komentar di postingan:</strong> ${c.postTitle}</div>
+          <div class="feed-desc">${c.text}</div>
+          <button class="open-btn" onclick="scrollToPost(${c.postIndex})">Lihat Post Asli</button>
+        </div>
+      `;
     });
-
-    peer.on('data', data => {
-      const msg = data.toString();
-      log(`👤 Peer: ${msg}`);
-    });
-
-    peer.on('error', err => {
-      log('❌ Error: ' + err);
-    });
-
-    peer.on('close', () => {
-      log('⚠️ Koneksi ditutup');
-    });
-
-    log(`⏳ Peer dibuat sebagai ${initiator ? 'Initiator' : 'Receiver'}`);
   }
 
-  function applySignal() {
-    if (!peer) {
-      alert('Mulai peer dulu dengan pilih mode di atas!');
-      return;
+  myFeed.innerHTML = html;
+}
+
+// SCROLL KE POSTINGAN
+function scrollToPost(postIndex){
+  openTab('home');           // Buka tab Home
+  // Tentukan halaman
+  const perPage = 10;        // sama dengan perPage di feed
+  currentPage = Math.floor(postIndex / perPage) + 1;
+  renderHomeFeed();          // render halaman yang benar
+
+  // Tunggu render selesai sebelum scroll
+  setTimeout(()=>{
+    const el = document.getElementById(`post-${postIndex}`);
+    if(el){
+      el.scrollIntoView({behavior:"smooth", block:"start"});
+      // Highlight sementara
+      el.style.boxShadow = "0 0 0 3px #2563eb inset";
+      setTimeout(()=>{ el.style.boxShadow = ""; }, 2000);
     }
-    try {
-      const signalData = JSON.parse(document.getElementById('signal').value);
-      peer.signal(signalData);
-      log('### Signal diterapkan');
-    } catch(e) {
-      alert('JSON signaling tidak valid!');
-      log('❌ Gagal parse signaling JSON');
-    }
+  }, 100);
+}
+
+function replyToComment(postIndex, commentId){
+  const txt = prompt("Tulis balasan komentar:");
+  if(txt && txt.trim() !== ""){
+    document.getElementById('new-comment').value = txt.trim();
+    kirimKomentar(postIndex, commentId);
+  }
+}
+
+// UPDATED openComments
+function openComments(postIndex){
+  const post = posts[postIndex];
+  openTab('comments');
+  const feed = document.getElementById('comment-feed');
+  feed.innerHTML = `
+    <div class="form-card">
+      <div class="post-original">
+        <div class="feed-author">${post.author}</div>
+        <div class="feed-title">${post.judul}</div>
+        ${post.ket ? `<div class="feed-desc">${post.ket}</div>` : ""}
+        <div><strong>Link Produk:</strong> <a href="${post.link}" target="_blank">${post.link}</a></div>
+      </div>
+      <h3>Komentar (${post.comments.length})</h3>
+      <div id="comments-list">
+        ${renderCommentsRecursive(post.comments, postIndex)}
+      </div>
+      <label>Tambah Komentar:</label>
+      <textarea id="new-comment" placeholder="Tulis komentar..."></textarea>
+      <button onclick="kirimKomentar(${postIndex})">Kirim</button>
+      <button onclick="scrollToPost(${postIndex})" style="background:#ef4444;margin-top:6px;">Kembali</button>
+    </div>
+  `;
+}
+
+// EDIT POST
+function openEditForm(postIndex){
+  const post=posts[postIndex];
+  let modal=document.createElement('div');
+  modal.style.position="fixed"; modal.style.top="0"; modal.style.left="0";
+  modal.style.width="100%"; modal.style.height="100%";
+  modal.style.background="rgba(0,0,0,0.5)"; modal.style.display="flex"; modal.style.justifyContent="center"; modal.style.alignItems="center";
+  modal.style.zIndex="9999";
+  modal.innerHTML=`
+    <div class="form-card" style="width:90%; max-width:500px;">
+      <h2>Edit Postingan</h2>
+      <label>Judul *</label>
+      <input id="edit-judul" value="${post.judul}">
+      <label>Keterangan (max 160 karakter)</label>
+      <textarea id="edit-ket" maxlength="160">${post.ket}</textarea>
+      <label>Link *</label>
+      <input id="edit-link" value="${post.link}">
+      <button id="save-edit" style="margin-top:6px;">Simpan Perubahan</button>
+      <button id="cancel-edit" style="margin-top:6px;background:#ef4444;">Batal</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  document.getElementById('save-edit').onclick=async()=>{
+    const newJ=document.getElementById('edit-judul').value.trim();
+    const newK=document.getElementById('edit-ket').value.trim();
+    const newL=document.getElementById('edit-link').value.trim();
+    if(!newJ||!newL){ alert("Judul dan link wajib diisi!"); return; }
+    try{
+      const resp = await fetch(GAS_URL, {method:"POST", body:JSON.stringify({editIndex:postIndex, judul:newJ, ket:newK, link:newL})});
+      const res = await resp.json();
+      if(res.status==="ok"){ modal.remove(); fetchPosts(); showNotif("Posting berhasil diperbarui!","#10b981"); }
+      else alert(res.message);
+    } catch(err){ console.error(err); alert("Gagal menyimpan perubahan."); }
+  };
+  document.getElementById('cancel-edit').onclick=()=>{modal.remove();};
+}
+
+// HAPUS POST
+async function hapusPost(postIndex){
+  if(confirm("Apakah yakin ingin menghapus postingan ini?")){
+    try{
+      const resp = await fetch(GAS_URL, {method:"POST", body:JSON.stringify({deleteIndex:postIndex})});
+      const res = await resp.json();
+      if(res.status==="ok") fetchPosts();
+      else alert(res.message);
+    } catch(err){ console.error(err); alert("Gagal menghapus postingan."); }
+  }
+}
+
+// PROFIL AUTHOR
+// PROFIL AUTHOR FINAL
+function showAuthorProfile(authorName){
+  openTab('profil');
+  const profilFeed = document.getElementById('profil-feed');
+
+  // Ambil semua postingan dan komentar author
+  const userPosts = posts.filter(p => p.author === authorName);
+  let userComments = [];
+  posts.forEach(p => {
+    p.comments.forEach(c => {
+      if(c.author === authorName){
+        userComments.push({...c, postTitle: p.judul, postIndex: posts.indexOf(p)});
+      }
+    });
+  });
+
+  let html = `
+    <div class="form-card">
+      <h2>Profil Author: ${authorName}</h2>
+      <p>Menampilkan semua postingan dan komentar yang diterbitkan.</p>
+      <button onclick="openTab('home'); renderHomeFeed();" style="background:#2563eb;color:white;padding:8px;border:none;border-radius:6px;cursor:pointer;font-weight:600;margin-top:6px;">Kembali ke Home</button>
+    </div>
+  `;
+
+  // Render postingan author
+  if(userPosts.length > 0){
+    html += `<h3>Postingan:</h3>`;
+    userPosts.forEach(p=>{
+      const idx = posts.indexOf(p);
+      html += `
+        <div class="feed-card">
+          <div class="feed-author">${p.author}</div>
+          <div class="feed-title">${p.judul}</div>
+          ${p.ket ? `<div class="feed-desc">${p.ket}</div>` : ""}
+          <button class="open-btn" onclick="scrollToPost(${idx})">Buka Post</button>
+        </div>
+      `;
+    });
   }
 
-  function sendMessage() {
-    const input = document.getElementById('messageInput');
-    if (!peer || !peer.connected) {
-      alert('Peer belum terkoneksi!');
-      return;
-    }
-    const msg = input.value.trim();
-    if (!msg) return;
-    peer.send(msg);
-    log(`🗨️ Kamu: ${msg}`);
-    input.value = '';
+  // Render komentar author
+  if(userComments.length > 0){
+    html += `<h3>Komentar:</h3>`;
+    userComments.forEach(c=>{
+      html += `
+        <div class="comment-card" data-author="${authorName}">
+          <div><strong>Komentar di "${c.postTitle}":</strong></div>
+          <div>${c.text}</div>
+          <button class="open-btn" style="margin-top:6px;" onclick="scrollToAuthorComment(${c.postIndex}, '${authorName}')">Buka Post</button>
+        </div>
+      `;
+    });
   }
+
+  profilFeed.innerHTML = html;
+}
+
+// SCROLL KE KOMENTAR AUTHOR
+function scrollToAuthorComment(postIndex, authorName){
+  // langsung buka tab comments
+  openComments(postIndex);
+
+  setTimeout(()=>{
+    const commentsList = document.getElementById('comments-list');
+    if(!commentsList) return;
+
+    // cari komentar author pakai data-author
+    const commentEl = Array.from(commentsList.children)
+      .find(c => c.getAttribute('data-author') === authorName);
+
+    if(commentEl){
+      commentEl.scrollIntoView({behavior:"smooth", block:"center"});
+      commentEl.style.background = "#fef3c7";
+      setTimeout(()=>{ commentEl.style.background = ""; }, 2000);
+    }
+  }, 150);
+}
+// INITIAL
+fetchPosts();
 </script>
-
 </body>
 </html>
