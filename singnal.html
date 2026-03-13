@@ -5,120 +5,146 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Share Link Affiliate - GAS</title>
 <style>
-body { font-family: system-ui; background: #f2f4f8; margin:0; padding:12px;}
-.container { max-width: 700px; margin:auto; }
-h1 { text-align: center; margin-bottom: 12px; color: #1f2937; }
-.tabs { display:flex; justify-content:space-around; margin-bottom:15px; }
-.tab-btn { flex:1; text-align:center; padding:10px 0; cursor:pointer; border-radius:8px; background:#e5e7eb; font-weight:600; margin:0 3px; }
-.tab-btn.active { background:#2563eb; color:white; }
-.tab-content { display:none; }
-.tab-content.active { display:block; }
-.form-card, .feed-card { background:#fff; border-radius:12px; padding:20px; box-shadow:0 3px 10px rgba(0,0,0,0.08); margin-bottom:15px; }
-label { font-size:14px; font-weight:600; margin-top:10px; display:block; }
-input, textarea { width:100%; padding:12px; margin-top:6px; margin-bottom:12px; border-radius:8px; border:1px solid #d1d5db; font-size:14px; box-sizing:border-box; }
-textarea { resize:none; height:80px; }
-button { background:#2563eb; color:white; border:none; padding:12px; width:100%; font-size:15px; font-weight:600; border-radius:8px; cursor:pointer; margin-top:6px; }
-button:hover { background:#1e40af; }
-.feed-title { font-size:16px; font-weight:700; margin-bottom:6px; color:#111827; }
-.feed-desc { font-size:14px; color:#4b5563; margin-bottom:8px; }
-.feed-author::before { content: "👤 "; }
-.feed-author { font-weight: 600; color: #2563eb; padding: 2px 8px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
-.feed-author:hover { background: #2563eb; color: white; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
-.open-btn, .comment-btn { padding:10px 14px; border:none; border-radius:8px; cursor:pointer; font-weight:600; width:48%; margin-right:2%; }
-.open-btn { background:#10b981; color:white; }
-.open-btn:hover { background:#059669; }
-.comment-btn { background:#2563eb; color:white; }
-.comment-btn:hover { background:#1e40af; }
-.comment-card { background:#f3f4f6; border-radius:8px; padding:10px; margin-bottom:8px; }
-.pagination { text-align:center; margin-top:18px; }
-.page-btn { display:inline-block; padding:6px 12px; margin:3px; background:#e5e7eb; border-radius:6px; cursor:pointer; font-size:14px; }
-.page-btn.active { background:#2563eb; color:white; }
-/* Hover effect feed-card di profil */
-#profil .feed-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-  transition: all 0.2s;
+body{font-family:system-ui;background:#f2f4f8;margin:0;padding:12px}
+.container{max-width:700px;margin:auto}
+
+h1{text-align:center;margin-bottom:12px;color:#1f2937}
+
+.tabs{display:flex;justify-content:space-around;margin-bottom:15px}
+.tab-btn{flex:1;text-align:center;padding:10px 0;cursor:pointer;border-radius:8px;background:#e5e7eb;font-weight:600;margin:0 3px}
+.tab-btn.active{background:#2563eb;color:#fff}
+
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+.form-card,.feed-card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 3px 10px rgba(0,0,0,.08);margin-bottom:15px}
+
+label{font-size:14px;font-weight:600;margin-top:10px;display:block}
+
+input,textarea{
+width:100%;padding:12px;margin-top:6px;margin-bottom:12px;
+border-radius:8px;border:1px solid #d1d5db;font-size:14px;box-sizing:border-box
 }
 
-/* Komentar author profil lebih menonjol */
-/* KOMENTAR SUPER RAPI */
-.comment-card{
-  display:flex;
-  gap:10px;
-  background:#f9fafb;
-  border-radius:10px;
-  padding:12px;
-  margin-bottom:8px;
-  border:1px solid #e5e7eb;
-  align-items:flex-start;
-  transition: all 0.2s;
+textarea{resize:none;height:80px}
+
+button{
+background:#2563eb;color:#fff;border:none;padding:12px;width:100%;
+font-size:15px;font-weight:600;border-radius:8px;cursor:pointer;margin-top:6px
 }
+
+button:hover{background:#1e40af}
+
+.feed-title{font-size:16px;font-weight:700;margin-bottom:6px;color:#111827}
+.feed-desc{font-size:14px;color:#4b5563;margin-bottom:8px}
+
+.feed-author::before{content:"👤 "}
+.feed-author{
+font-weight:600;color:#2563eb;padding:2px 8px;border-radius:8px;
+cursor:pointer;transition:.2s
+}
+
+.feed-author:hover{
+background:#2563eb;color:#fff;
+box-shadow:0 2px 8px rgba(0,0,0,.2)
+}
+
+.open-btn,.comment-btn{
+padding:10px 14px;border:none;border-radius:8px;
+cursor:pointer;font-weight:600;width:48%;margin-right:2%
+}
+
+.open-btn{background:#10b981;color:#fff}
+.open-btn:hover{background:#059669}
+
+.comment-btn{background:#2563eb;color:#fff}
+.comment-btn:hover{background:#1e40af}
+
+.pagination{text-align:center;margin-top:18px}
+.page-btn{
+display:inline-block;padding:6px 12px;margin:3px;
+background:#e5e7eb;border-radius:6px;cursor:pointer;font-size:14px
+}
+.page-btn.active{background:#2563eb;color:#fff}
+
+/* hover feed profil */
+#profil .feed-card:hover{
+transform:translateY(-2px);
+box-shadow:0 4px 12px rgba(0,0,0,.12);
+transition:.2s
+}
+
+/* =========================
+   KOMENTAR SUPER RAPI
+========================= */
+
+.comment-card{
+display:flex;gap:10px;background:#f9fafb;border-radius:10px;
+padding:12px;margin-bottom:8px;border:1px solid #e5e7eb;
+align-items:flex-start;transition:.2s
+}
+
 .comment-card:hover{
-  background:#f3f4f6;
-  box-shadow:0 2px 6px rgba(0,0,0,0.1);
+background:#f3f4f6;
+box-shadow:0 2px 6px rgba(0,0,0,.1)
 }
 
 .comment-avatar{
-  width:36px;
-  height:36px;
-  border-radius:50%;
-  background:#2563eb;
-  color:white;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:14px;
-  font-weight:bold;
-  flex-shrink:0;
+width:36px;height:36px;border-radius:50%;
+background:#2563eb;color:#fff;font-weight:bold;
+display:flex;align-items:center;justify-content:center;
+font-size:14px;flex-shrink:0
 }
 
-.comment-body{
-  flex:1;
-}
+.comment-body{flex:1}
 
 .comment-author{
-  font-weight:600;
-  color:#1f2937;
-  font-size:14px;
+font-weight:600;color:#1f2937;font-size:14px
 }
 
 .comment-text{
-  margin-top:2px;
-  font-size:14px;
-  color:#374151;
-  line-height:1.4;
+margin-top:2px;font-size:14px;color:#374151;line-height:1.4
 }
 
 .comment-actions{
-  margin-top:6px;
-  display:flex;
-  gap:12px;
+margin-top:6px;display:flex;gap:12px
 }
 
 .comment-actions button{
-  background:none;
-  border:none;
-  font-size:13px;
-  font-weight:600;
-  color:#2563eb;
-  cursor:pointer;
-  padding:0;
+background:none;border:none;font-size:13px;
+font-weight:600;color:#2563eb;cursor:pointer;padding:0
 }
 
-.comment-actions button:hover{
-  text-decoration:underline;
-}
+.comment-actions button:hover{text-decoration:underline}
 
 /* garis thread reply */
 .comment-reply{
-  border-left:2px solid #e5e7eb;
-  margin-left:20px;
-  padding-left:12px;
+border-left:2px solid #e5e7eb;
+margin-left:20px;padding-left:12px
 }
-@media (max-width:480px) {
-  .tabs { flex-direction:column; }
-  .tab-btn { margin:4px 0; }
-  .open-btn, .comment-btn { width:100%; margin-right:0; margin-bottom:6px; }
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media(max-width:480px){
+
+.tabs{flex-direction:column}
+
+.tab-btn{margin:4px 0}
+
+.open-btn,.comment-btn{
+width:100%;margin-right:0;margin-bottom:6px
+}
+
+.comment-card{
+padding:10px
+}
+
+.comment-avatar{
+width:32px;height:32px;font-size:13px
+}
+
 }
 </style>
 </head>
@@ -452,14 +478,13 @@ function renderMyFeed(){
   if(myComments.length > 0){
     html += `<h3>Komentar Saya:</h3>`;
     myComments.forEach(c=>{
-      html += `
-        <div class="feed-card">
-          <div><strong>Komentar di postingan:</strong> ${c.postTitle}</div>
-          <div class="feed-desc">${c.text}</div>
-          <button class="open-btn" onclick="scrollToPost(${c.postIndex})">Lihat Post Asli</button>
-        </div>
-      `;
-    });
+  html += `
+    <div class="feed-card">
+      <div class="feed-desc"><strong>Komentar di:</strong> ${c.postTitle}</div>
+      ${renderCommentsRecursive([c], c.postIndex)}
+    </div>
+  `;
+});
   }
 
   myFeed.innerHTML = html;
@@ -612,14 +637,13 @@ function showAuthorProfile(authorName){
   if(userComments.length > 0){
     html += `<h3>Komentar:</h3>`;
     userComments.forEach(c=>{
-      html += `
-        <div class="comment-card" data-author="${authorName}">
-          <div><strong>Komentar di "${c.postTitle}":</strong></div>
-          <div>${c.text}</div>
-          <button class="open-btn" style="margin-top:6px;" onclick="scrollToAuthorComment(${c.postIndex}, '${authorName}')">Buka Post</button>
-        </div>
-      `;
-    });
+  html += `
+    <div class="feed-card">
+      <div class="feed-desc"><strong>Komentar di:</strong> ${c.postTitle}</div>
+      ${renderCommentsRecursive([c], c.postIndex)}
+    </div>
+  `;
+});
   }
 
   profilFeed.innerHTML = html;
