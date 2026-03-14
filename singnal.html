@@ -3,746 +3,172 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Share Link Affiliate - GAS</title>
+<title>Mobile-Optimized HTML/JS Editor (Namespace + Notif)</title>
 <style>
-body{font-family:system-ui;background:#f2f4f8;margin:0;padding:12px}
-.container{max-width:700px;margin:auto}
-
-h1{text-align:center;margin-bottom:12px;color:#1f2937}
-
-.tabs{display:flex;justify-content:space-around;margin-bottom:15px}
-.tab-btn{flex:1;text-align:center;padding:10px 0;cursor:pointer;border-radius:8px;background:#e5e7eb;font-weight:600;margin:0 3px}
-.tab-btn.active{background:#2563eb;color:#fff}
-
-.tab-content{display:none}
-.tab-content.active{display:block}
-
-.form-card,.feed-card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 3px 10px rgba(0,0,0,.08);margin-bottom:15px}
-
-label{font-size:14px;font-weight:600;margin-top:10px;display:block}
-
-input,textarea{
-width:100%;padding:12px;margin-top:6px;margin-bottom:12px;
-border-radius:8px;border:1px solid #d1d5db;font-size:14px;box-sizing:border-box
-}
-
-textarea{resize:none;height:80px}
-
-button{
-background:#2563eb;color:#fff;border:none;padding:12px;width:100%;
-font-size:15px;font-weight:600;border-radius:8px;cursor:pointer;margin-top:6px
-}
-
-button:hover{background:#1e40af}
-
-.feed-title{font-size:16px;font-weight:700;margin-bottom:6px;color:#111827}
-.feed-desc{font-size:14px;color:#4b5563;margin-bottom:8px}
-
-.feed-author::before{content:"👤 "}
-.feed-author{
-font-weight:600;color:#2563eb;padding:2px 8px;border-radius:8px;
-cursor:pointer;transition:.2s
-}
-
-.feed-author:hover{
-background:#2563eb;color:#fff;
-box-shadow:0 2px 8px rgba(0,0,0,.2)
-}
-
-.open-btn,.comment-btn{
-padding:10px 14px;border:none;border-radius:8px;
-cursor:pointer;font-weight:600;width:48%;margin-right:2%
-}
-
-.open-btn{background:#10b981;color:#fff}
-.open-btn:hover{background:#059669}
-
-.comment-btn{background:#2563eb;color:#fff}
-.comment-btn:hover{background:#1e40af}
-
-.pagination{text-align:center;margin-top:18px}
-.page-btn{
-display:inline-block;padding:6px 12px;margin:3px;
-background:#e5e7eb;border-radius:6px;cursor:pointer;font-size:14px
-}
-.page-btn.active{background:#2563eb;color:#fff}
-
-/* hover feed profil */
-#profil .feed-card:hover{
-transform:translateY(-2px);
-box-shadow:0 4px 12px rgba(0,0,0,.12);
-transition:.2s
-}
-
-/* =========================
-   KOMENTAR SUPER RAPI
-========================= */
-
-.comment-card{
-display:flex;gap:10px;background:#f9fafb;border-radius:10px;
-padding:12px;margin-bottom:8px;border:1px solid #e5e7eb;
-align-items:flex-start;transition:.2s
-}
-
-.comment-card:hover{
-background:#f3f4f6;
-box-shadow:0 2px 6px rgba(0,0,0,.1)
-}
-
-.comment-avatar{
-width:36px;height:36px;border-radius:50%;
-background:#2563eb;color:#fff;font-weight:bold;
-display:flex;align-items:center;justify-content:center;
-font-size:14px;flex-shrink:0
-}
-
-.comment-body{flex:1}
-
-.comment-author{
-font-weight:600;color:#1f2937;font-size:14px
-}
-
-.comment-text{
-margin-top:2px;font-size:14px;color:#374151;line-height:1.4
-}
-
-.comment-actions{
-margin-top:6px;display:flex;gap:12px
-}
-
-.comment-actions button{
-background:none;border:none;font-size:13px;
-font-weight:600;color:#2563eb;cursor:pointer;padding:0
-}
-
-.comment-actions button:hover{text-decoration:underline}
-
-/* garis thread reply */
-.comment-reply{
-border-left:2px solid #e5e7eb;
-margin-left:20px;padding-left:12px
-}
-
-.comment-time{
-  font-size:11px;
-  color:#9ca3af;
-  margin-left:4px;
-}
-
-/* Waktu posting & komentar kecil & netral */
-.feed-time, .comment-time {
-  font-size:12px;
-  color:#6b7280; /* abu gelap netral */
-  margin-left:6px;
-}
-
-/* =========================
-   RESPONSIVE
-========================= */
-
-@media(max-width:480px){
-
-.tabs{flex-direction:column}
-
-.tab-btn{margin:4px 0}
-
-.open-btn,.comment-btn{
-width:100%;margin-right:0;margin-bottom:6px
-}
-
-.comment-card{
-padding:10px
-}
-
-.comment-avatar{
-width:32px;height:32px;font-size:13px
-}
-
-}
+  body, html {margin:0;padding:0;font-family:system-ui,sans-serif;height:100%;display:flex;flex-direction:column;background:#f9f9f9;}
+  #editorContainer{padding:10px;background:#fff;border-bottom:1px solid #ccc;}
+  textarea{width:100%;min-height:120px;font-family:monospace;font-size:14px;padding:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;resize:vertical;margin-top:5px;}
+  .button-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;}
+  button{flex:1 1 auto;padding:10px;font-size:16px;cursor:pointer;min-width:90px;border-radius:5px;border:1px solid #888;}
+  select{margin-top:10px;padding:8px;font-size:16px;width:100%;border-radius:5px;border:1px solid #888;}
+  #output{flex-grow:1;width:100%;border:none;margin-top:5px;}
+  .notif{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);background:#323232;color:white;padding:10px 20px;border-radius:5px;opacity:0.95;z-index:999;display:none;}
+  @media(max-width:500px){button{font-size:14px;padding:8px;min-width:70px;}textarea{font-size:13px;}}
 </style>
 </head>
 <body>
-<div class="container">
-<h1>Share Link Affiliate</h1>
-<div class="tabs">
-  <div class="tab-btn active" onclick="openTab('home')">Home</div>
-  <div class="tab-btn" onclick="openTab('posting')">Posting</div>
-  <div class="tab-btn" onclick="openTab('mydata')">Data Saya</div>
-  <div class="tab-btn" onclick="openTab('tentang')">Tentang</div>
-</div>
 
-<div id="home" class="tab-content active">
-  <div class="form-card">
-    <h2>Selamat Datang di Dunia Share Link!</h2>
-<p>
-  🌟 Selamat datang di platform <strong>share link super praktis & gratis</strong>!  
-  Di sini, Anda bisa membagikan link produk affiliate, video YouTube, TikTok, Shopee, dan konten favorit lainnya dengan mudah.  
-  
-</p>
+<div id="editorContainer">
+  <button onclick="toggleEditor()">🔽 Toggle Input</button>
+
+  <textarea id="codeInput" placeholder="Tulis kode HTML/JS di sini..."></textarea>
+
+  <div class="button-row">
+    <button onclick="pasteCode()">📋 Paste</button>
+    <button onclick="runCode()">▶️ Run</button>
+    <button onclick="clearCode()">🗑️ Clear</button>
+    <button onclick="copyCode()">📋 Copy</button>
   </div>
-  <div id="home-feed"></div>
-  <div class="pagination" id="home-pagination"></div>
-</div>
 
-<div id="posting" class="tab-content">
-  <div class="form-card">
-    <label>Judul *</label>
-    <input id="judul" placeholder="Masukkan judul">
-    <label>Keterangan (max 160 karakter)</label>
-    <textarea id="ket" maxlength="160" placeholder="Masukkan deskripsi singkat"></textarea>
-    <label>Link *</label>
-    <input id="link" placeholder="Masukkan link Shopee/TikTok/YouTube">
-    <div id="author-display" style="margin-bottom:8px; font-weight:600; color:#374151;"></div>
-    <button onclick="tambahPost()">Posting</button>
+  <div class="button-row">
+    <button onclick="saveProject()">💾 Save</button>
+    <button onclick="saveAsProject()">💾 Save As</button>
+    <button onclick="renameProject()">✏️ Rename</button>
   </div>
+
+  <label for="projectSelect">Buka Proyek:</label>
+  <select id="projectSelect" onchange="loadSelectedProject()">
+    <option value="">-- Pilih proyek --</option>
+  </select>
+  <button style="width: 100%; margin-top: 5px;" onclick="deleteProject()">❌ Hapus Proyek</button>
 </div>
 
-<div id="mydata" class="tab-content">
-  <div id="my-feed"></div>
-</div>
-
-<div id="tentang" class="tab-content">
-  <div class="form-card">
- <h2>Tentang Web Ini</h2>
-<p>
-  🌐 Web ini dibuat sepenuhnya menggunakan <strong>HTML, CSS, dan JavaScript</strong>, tanpa aplikasi tambahan, sehingga cepat, ringan, dan responsif di semua perangkat, termasuk smartphone.  
-
-  💾 Semua postingan, komentar, dan aktivitas pengguna tersimpan di <strong>Google Apps Script (GAS)</strong>, bukan di localStorage, sehingga aman, terpusat, dan dapat diakses dari mana saja.  
-  Anda tidak perlu khawatir kehilangan data atau postingan, semuanya disimpan rapi dan dapat dikelola dengan mudah.  
-
-  🚀 Tujuan web ini adalah memberikan pengalaman berbagi link terbaik: mulai dari produk affiliate, video YouTube, TikTok, hingga link Shopee.  
-  Fitur-fitur unggulan:  
-  - Membuat dan membagikan postingan dengan cepat.  
-  - Melihat, mengedit, dan menghapus postingan dengan mudah.  
-  - Menambahkan komentar serta melihat interaksi pengguna lain.  
-  - Tampilan responsif yang nyaman untuk HP maupun desktop.  
-
-  🔒 Dengan sistem terpusat dan aman, web ini memastikan semua konten Anda terlindungi, mudah dicari, dan selalu tersedia.  
-  Ini bukan sekadar tempat share link, tetapi juga platform untuk membangun interaksi, berbagi informasi, dan mengelola konten Anda dengan profesional.  
-
-  🌟 Nikmati kemudahan berbagi, keamanan data, dan kontrol penuh atas semua postingan Anda di satu tempat.  
-  Web ini dirancang untuk siapa saja yang ingin berbagi konten dengan praktis, aman, dan menyenangkan!
-</p>
-  </div>
-</div>
-
-<div id="profil" class="tab-content">
-  <div id="profil-feed"></div>
-</div>
-
-<div id="comments" class="tab-content">
-  <div id="comment-feed"></div>
-</div>
-
-</div>
+<iframe id="output"></iframe>
+<div id="notif" class="notif"></div>
 
 <script>
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwzsIy_r8hsXjIH7nt2VgxETeM86kipahJCMPMLLAzgenyjWc-SrkxTRwI-uym1-Qws/exec";
+const NAMESPACE = "editor_v2_"; // prefix storage berbeda
+let defaultProjectCounter = 1;
 
-// TAB
-function openTab(tabName){
-  document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
-  const tabBtn = document.querySelector(`.tab-btn[onclick="openTab('${tabName}')"]`);
-  if(tabBtn) tabBtn.classList.add('active');
-  document.getElementById(tabName).classList.add('active');
+// ===== Notifikasi =====
+function showNotif(msg){
+  const n = document.getElementById("notif");
+  n.innerText = msg;
+  n.style.display = "block";
+  setTimeout(()=>{ n.style.display = "none"; },2000);
 }
 
-// USERNAME
-function generateUsername(){
-  const firstNames = ["Riko","Budi","Sari","Tari","Andi","Dina","Rina","Joko","Lili","Dedi"];
-  const lastNames = ["Jaya","Putra","Sari","Lestari","Wijaya","Santoso","Pratama","Hidayat","Saputra","Rahma"];
-  const num = Math.floor(1000 + Math.random()*9000);
-  return firstNames[Math.floor(Math.random()*firstNames.length)] + lastNames[Math.floor(Math.random()*lastNames.length)] + num;
+// ===== Fungsi editor =====
+function runCode(){
+  document.getElementById('output').srcdoc = document.getElementById('codeInput').value;
 }
-let username = localStorage.getItem("visitorUsername");
-if(!username){
-  username = generateUsername();
-  localStorage.setItem("visitorUsername", username);
+
+function clearCode(){
+  document.getElementById('codeInput').value='';
+  document.getElementById('output').srcdoc='';
 }
-document.getElementById("author-display").innerText = "Author: " + username;
 
-// DATA
-let posts = [];
-let currentPage = 1;
-let perPage = 10;
-
-// FETCH DATA DARI GAS
-async function fetchPosts(){
+async function pasteCode(){
   try{
-    const resp = await fetch(GAS_URL, {method:"POST", body: JSON.stringify({read:true})});
-    const data = await resp.json();
-    posts = data || [];
-    posts.forEach(p=>{ if(!p.comments)p.comments=[]; });
-    renderHomeFeed();
-    renderMyFeed();
-  } catch(err){ console.error(err); alert("Gagal ambil data dari server."); }
+    const text = await navigator.clipboard.readText();
+    document.getElementById('codeInput').value = text;
+    showNotif("Kode berhasil ditempel");
+  }catch(err){ showNotif('Gagal membaca clipboard'); }
 }
 
-// TAMBAH POST
-async function tambahPost(){
-  const judul = document.getElementById("judul").value.trim();
-  const ket = document.getElementById("ket").value.trim();
-  const link = document.getElementById("link").value.trim();
-  if(!judul||!link){ showNotif("Judul dan link wajib diisi","#ef4444"); return; }
-
-  const entry = {
-    judul,
-    ket,
-    link,
-    author: username,
-    comments: [],
-    createdAt: new Date().toISOString() // simpan waktu UTC
-  };
-
+async function copyCode(){
+  const code = document.getElementById('codeInput').value;
+  if(!code.trim()){ showNotif('Tidak ada kode untuk disalin'); return; }
   try{
-    const resp = await fetch(GAS_URL, {method:"POST", body:JSON.stringify(entry)});
-    const res = await resp.json();
-    if(res.status==="ok"){
-      document.getElementById("judul").value="";
-      document.getElementById("ket").value="";
-      document.getElementById("link").value="";
-      fetchPosts();
-      showNotif("Posting berhasil disimpan!","#10b981");
-    } else { alert(res.message); }
-  } catch(err){ console.error(err); alert("Gagal menyimpan postingan."); }
+    await navigator.clipboard.writeText(code);
+    showNotif('Kode berhasil disalin ke clipboard');
+  }catch(err){ showNotif('Gagal menyalin kode'); }
 }
 
-// NOTIF
-function showNotif(text,color){
-  let notif=document.createElement("div");
-  notif.innerText=text;
-  notif.style.background=color;
-  notif.style.color="white";
-  notif.style.padding="10px";
-  notif.style.borderRadius="8px";
-  notif.style.marginTop="10px";
-  notif.style.textAlign="center";
-  notif.style.fontWeight="600";
-  const formCard=document.querySelector("#posting .form-card");
-  formCard.appendChild(notif);
-  setTimeout(()=>{notif.remove();},2500);
-}
-
-// KOMENTAR
-let commentIdCounter = 1; // Inisialisasi global untuk unique ID
-
-async function kirimKomentar(postIndex, parentId = null){
-  const txt = document.getElementById('new-comment').value.trim();
-  if(!txt){ alert("Komentar tidak boleh kosong!"); return; }
-
-  const post = posts[postIndex];
-
-  const newComment = {
-    id: commentIdCounter++,
-    author: username,
-    text: txt,
-    createdAt: new Date().toISOString(), // waktu komentar
-    replies: []
-  };
-
-  if(parentId === null){
-    post.comments.push(newComment);
-  } else {
-
-    function addReply(comments){
-      for(let c of comments){
-        if(c.id === parentId){
-          c.replies.push(newComment);
-          return true;
-        }
-        if(c.replies.length > 0){
-          if(addReply(c.replies)) return true;
-        }
-      }
-      return false;
-    }
-
-    addReply(post.comments);
-  }
-
-  try{
-    const resp = await fetch(GAS_URL, {
-      method:"POST",
-      body:JSON.stringify({editIndex: postIndex, comments: post.comments})
-    });
-
-    const res = await resp.json();
-
-    if(res.status==="ok"){
-      document.getElementById('new-comment').value="";
-      openComments(postIndex);
-      fetchPosts();
-    } else alert(res.message);
-
-  } catch(err){
-    console.error(err);
-    alert("Gagal menyimpan komentar.");
-  }
-}
-
-function renderCommentsRecursive(comments, postIndex, level = 0){
-  let html = "";
-
-  comments.forEach(c => {
-
-    const initial = c.author.charAt(0).toUpperCase();
-
-    html += `
-      <div class="${level>0?'comment-reply':''}">
-        <div class="comment-card" data-author="${c.author}" data-comment-id="${c.id}">
-          
-          <div class="comment-avatar">${initial}</div>
-
-          <div class="comment-body">
-            
-            <div class="comment-author">
-              ${renderAuthorLink(c.author)}
-              <span class="comment-time">
-                • ${formatWIB(c.createdAt || new Date().toISOString())}
-              </span>
-            </div>
-
-            <div class="comment-text">
-              ${c.text}
-            </div>
-
-            <div class="comment-actions">
-              <button onclick="replyToComment(${postIndex}, ${c.id})">
-                ↩ Balas
-              </button>
-
-              <button onclick="scrollToPost(${postIndex})">
-                Lihat Post
-              </button>
-            </div>
-
-          </div>
-
-        </div>
-      </div>
-    `;
-
-    if(c.replies && c.replies.length > 0){
-      html += renderCommentsRecursive(c.replies, postIndex, level+1);
-    }
-
-  });
-
-  return html;
-}
-
-function renderAuthorLink(authorName){
-  return `<span class="feed-author" style="cursor:pointer;" onclick="showAuthorProfile('${authorName}')">${authorName}</span>`;
-}
-
-// RENDER HOME FEED
-function renderHomeFeed(){
-  const feedContainer = document.getElementById('home-feed');
-  const start = (currentPage-1)*perPage;
-  const sliceData = posts.slice(start,start+perPage);
-  let html = "";
-
-  sliceData.forEach((p, idx)=>{
-    const globalIndex = posts.indexOf(p);
-    const totalComments = countAllComments(p.comments); // hitung semua komentar bersarang
-    html += `
-      <div class="feed-card" id="post-${globalIndex}">
-        <div>${renderAuthorLink(p.author)} • <span class="feed-time">${formatWIB(p.createdAt)}</span></div>
-        <div class="feed-title">${p.judul}</div>
-        ${p.ket ? `<div class="feed-desc">${p.ket}</div>` : ""}
-        <div style="display:flex; gap:4%;">
-          <button class="comment-btn" style="flex:1;" onclick="openComments(${globalIndex})">
-            Komentar (${totalComments})
-          </button>
-          <button class="open-btn" style="flex:1;" onclick="window.open('${p.link}','_blank')">Buka Link</button>
-        </div>
-      </div>
-    `;
-  });
-
-  feedContainer.innerHTML = html;
-
-  // pagination
-  const paginationEl = document.getElementById('home-pagination');
-  const totalPage = Math.ceil(posts.length/perPage);
-  if(posts.length>perPage){
-    let htmlPage="";
-    for(let i=1;i<=totalPage;i++){
-      htmlPage+=`<span class="page-btn ${i==currentPage?"active":""}" onclick="gotoHomePage(${i})">${i}</span>`;
-    }
-    paginationEl.innerHTML=htmlPage;
-  } else paginationEl.innerHTML="";
-}
-
-function gotoHomePage(p){ currentPage=p; renderHomeFeed(); }
-
-// RENDER MY FEED
-function renderMyFeed(){
-  const myFeed = document.getElementById('my-feed');
-  const myPosts = posts.filter(p => p.author === username);
-  
-  // Ambil komentar user
-  let myComments = [];
-  posts.forEach((p, idx) => {
-    p.comments.forEach(c => {
-      if(c.author === username){
-        myComments.push({...c, postTitle: p.judul, postIndex: posts.indexOf(p)});
-      }
-    });
-  });
-
-  let html = "";
-
-  // Tampilkan postingan sendiri
-  myPosts.forEach(p=>{
-    const globalIndex = posts.indexOf(p);
-    const totalComments = countAllComments(p.comments); // gunakan countAllComments
-    html+=`
-      <div class="feed-card" id="post-${globalIndex}">
-        <div>${renderAuthorLink(p.author)} • <span class="feed-time">${formatWIB(p.createdAt)}</span></div>
-        <div class="feed-title">${p.judul}</div>
-        ${p.ket? `<div class="feed-desc">${p.ket}</div>` : ""}
-        <div style="display:flex; gap:4%;">
-          <button class="comment-btn" style="flex:1;" onclick="openComments(${globalIndex})">
-            Komentar (${totalComments})
-          </button>
-          <button class="open-btn" style="flex:1;" onclick="window.open('${p.link}','_blank')">Buka Link</button>
-        </div>
-        <button style="background:#2563eb;margin-top:6px;" onclick="openEditForm(${globalIndex})">Edit</button>
-        <button style="background:#ef4444;margin-top:6px;" onclick="hapusPost(${globalIndex})">Hapus</button>
-      </div>
-    `;
-  });
-
-  // Tampilkan komentar user
-  if(myComments.length > 0){
-    html += `<h3>Komentar Saya:</h3>`;
-    myComments.forEach(c=>{
-      html += `
-        <div class="feed-card">
-          <div class="feed-desc"><strong>Komentar di:</strong> ${c.postTitle}</div>
-          ${renderCommentsRecursive([c], c.postIndex)}
-        </div>
-      `;
-    });
-  }
-
-  myFeed.innerHTML = html;
-}
-
-// SCROLL KE POSTINGAN
-function scrollToPost(postIndex){
-  openTab('home');           // Buka tab Home
-  // Tentukan halaman
-  const perPage = 10;        // sama dengan perPage di feed
-  currentPage = Math.floor(postIndex / perPage) + 1;
-  renderHomeFeed();          // render halaman yang benar
-
-  // Tunggu render selesai sebelum scroll
-  setTimeout(()=>{
-    const el = document.getElementById(`post-${postIndex}`);
-    if(el){
-      el.scrollIntoView({behavior:"smooth", block:"start"});
-      // Highlight sementara
-      el.style.boxShadow = "0 0 0 3px #2563eb inset";
-      setTimeout(()=>{ el.style.boxShadow = ""; }, 2000);
-    }
-  }, 100);
-}
-
-function replyToComment(postIndex, commentId){
-  const txt = prompt("Tulis balasan komentar:");
-  if(txt && txt.trim() !== ""){
-    document.getElementById('new-comment').value = txt.trim();
-    kirimKomentar(postIndex, commentId);
-  }
-}
-
-// UPDATED openComments
-function openComments(postIndex){
-  const post = posts[postIndex];
-  openTab('comments');
-  const feed = document.getElementById('comment-feed');
-  feed.innerHTML = `
-    <div class="form-card">
-      <div class="post-original">
-        <div>${renderAuthorLink(post.author)} • <span class="feed-time">${formatWIB(post.createdAt)}</span></div>
-        <div class="feed-title">${post.judul}</div>
-        ${post.ket ? `<div class="feed-desc">${post.ket}</div>` : ""}
-        <div><strong>Link Produk:</strong> <a href="${post.link}" target="_blank">${post.link}</a></div>
-      </div>
-      <h3>Komentar (${post.comments.length})</h3>
-      <div id="comments-list">
-        ${renderCommentsRecursive(post.comments, postIndex)}
-      </div>
-      <label>Tambah Komentar:</label>
-      <textarea id="new-comment" placeholder="Tulis komentar..."></textarea>
-      <button onclick="kirimKomentar(${postIndex})">Kirim</button>
-      <button onclick="scrollToPost(${postIndex})" style="background:#ef4444;margin-top:6px;">Kembali</button>
-    </div>
-  `;
-}
-
-// EDIT POST
-function openEditForm(postIndex){
-  const post=posts[postIndex];
-  let modal=document.createElement('div');
-  modal.style.position="fixed"; modal.style.top="0"; modal.style.left="0";
-  modal.style.width="100%"; modal.style.height="100%";
-  modal.style.background="rgba(0,0,0,0.5)"; modal.style.display="flex"; modal.style.justifyContent="center"; modal.style.alignItems="center";
-  modal.style.zIndex="9999";
-  modal.innerHTML=`
-    <div class="form-card" style="width:90%; max-width:500px;">
-      <h2>Edit Postingan</h2>
-      <label>Judul *</label>
-      <input id="edit-judul" value="${post.judul}">
-      <label>Keterangan (max 160 karakter)</label>
-      <textarea id="edit-ket" maxlength="160">${post.ket}</textarea>
-      <label>Link *</label>
-      <input id="edit-link" value="${post.link}">
-      <button id="save-edit" style="margin-top:6px;">Simpan Perubahan</button>
-      <button id="cancel-edit" style="margin-top:6px;background:#ef4444;">Batal</button>
-    </div>
-  `;
-  document.body.appendChild(modal);
-  document.getElementById('save-edit').onclick=async()=>{
-    const newJ=document.getElementById('edit-judul').value.trim();
-    const newK=document.getElementById('edit-ket').value.trim();
-    const newL=document.getElementById('edit-link').value.trim();
-    if(!newJ||!newL){ alert("Judul dan link wajib diisi!"); return; }
-    try{
-      const resp = await fetch(GAS_URL, {method:"POST", body:JSON.stringify({editIndex:postIndex, judul:newJ, ket:newK, link:newL})});
-      const res = await resp.json();
-      if(res.status==="ok"){ modal.remove(); fetchPosts(); showNotif("Posting berhasil diperbarui!","#10b981"); }
-      else alert(res.message);
-    } catch(err){ console.error(err); alert("Gagal menyimpan perubahan."); }
-  };
-  document.getElementById('cancel-edit').onclick=()=>{modal.remove();};
-}
-
-// HAPUS POST
-async function hapusPost(postIndex){
-  if(confirm("Apakah yakin ingin menghapus postingan ini?")){
-    try{
-      const resp = await fetch(GAS_URL, {method:"POST", body:JSON.stringify({deleteIndex:postIndex})});
-      const res = await resp.json();
-      if(res.status==="ok") fetchPosts();
-      else alert(res.message);
-    } catch(err){ console.error(err); alert("Gagal menghapus postingan."); }
-  }
-}
-
-// PROFIL AUTHOR
-// PROFIL AUTHOR FINAL
-function showAuthorProfile(authorName){
-  openTab('profil');
-  const profilFeed = document.getElementById('profil-feed');
-
-  // Ambil semua postingan dan komentar author
-  const userPosts = posts.filter(p => p.author === authorName);
-  let userComments = [];
-  posts.forEach(p => {
-    p.comments.forEach(c => {
-      if(c.author === authorName){
-        userComments.push({...c, postTitle: p.judul, postIndex: posts.indexOf(p)});
-      }
-    });
-  });
-
-  let html = `
-    <div class="form-card">
-      <h2>Profil Author: ${authorName}</h2>
-      <p>Menampilkan semua postingan dan komentar yang diterbitkan.</p>
-      <button onclick="openTab('home'); renderHomeFeed();" style="background:#2563eb;color:white;padding:8px;border:none;border-radius:6px;cursor:pointer;font-weight:600;margin-top:6px;">Kembali ke Home</button>
-    </div>
-  `;
-
-  // Render postingan author
-  if(userPosts.length > 0){
-    html += `<h3>Postingan:</h3>`;
-    userPosts.forEach(p=>{
-      const idx = posts.indexOf(p);
-      const totalComments = countAllComments(p.comments); // hitung semua komentar bersarang
-      html += `
-        <div class="feed-card">
-          <div class="feed-author">${p.author}</div>
-          <div class="feed-title">${p.judul}</div>
-          ${p.ket ? `<div class="feed-desc">${p.ket}</div>` : ""}
-          <button class="comment-btn" onclick="openComments(${idx})">Komentar (${totalComments})</button>
-          <button class="open-btn" onclick="scrollToPost(${idx})">Buka Post</button>
-        </div>
-      `;
-    });
-  }
-
-  // Render komentar author
-  if(userComments.length > 0){
-    html += `<h3>Komentar:</h3>`;
-    userComments.forEach(c=>{
-      html += `
-        <div class="feed-card">
-          <div class="feed-desc"><strong>Komentar di:</strong> ${c.postTitle}</div>
-          ${renderCommentsRecursive([c], c.postIndex)}
-        </div>
-      `;
-    });
-  }
-
-  profilFeed.innerHTML = html;
-}
-
-// SCROLL KE KOMENTAR AUTHOR
-function scrollToAuthorComment(postIndex, authorName){
-  // langsung buka tab comments
-  openComments(postIndex);
-
-  setTimeout(()=>{
-    const commentsList = document.getElementById('comments-list');
-    if(!commentsList) return;
-
-    // cari komentar author pakai data-author
-    const commentEl = Array.from(commentsList.children)
-      .find(c => c.getAttribute('data-author') === authorName);
-
-    if(commentEl){
-      commentEl.scrollIntoView({behavior:"smooth", block:"center"});
-      commentEl.style.background = "#fef3c7";
-      setTimeout(()=>{ commentEl.style.background = ""; }, 2000);
-    }
-  }, 150);
-}
-
-function countAllComments(comments){
-  let count = 0;
-  comments.forEach(c=>{
-    count += 1; // hitung komentar ini
-    if(c.replies && c.replies.length > 0){
-      count += countAllComments(c.replies); // hitung semua reply
+function toggleEditor(){
+  const editorContainer = document.getElementById('editorContainer');
+  Array.from(editorContainer.children).forEach(el=>{
+    if(el.tagName!=='BUTTON' || !el.textContent.includes('Toggle Input')){
+      el.style.display = (el.style.display==='none')?'block':'none';
     }
   });
-  return count;
 }
 
-function formatWIB(dateStr){
-  const date = new Date(dateStr);
-  // WIB = UTC+7
-  const wibDate = new Date(date.getTime() + 7*60*60*1000);
-
-  const day = String(wibDate.getDate()).padStart(2,'0');
-  const monthNames = ["Januari","Februari","Maret","April","Mei","Juni",
-                      "Juli","Agustus","September","Oktober","November","Desember"];
-  const month = monthNames[wibDate.getMonth()];
-  const year = wibDate.getFullYear();
-
-  const hours = String(wibDate.getHours()).padStart(2,'0');
-  const minutes = String(wibDate.getMinutes()).padStart(2,'0');
-
-  return `${day}-${String(wibDate.getMonth()+1).padStart(2,'0')}-${year} ${hours}:${minutes}`;
+// ===== Storage =====
+function saveProject(){
+  const code = document.getElementById('codeInput').value;
+  if(!code.trim()){ showNotif('Kode kosong!'); return; }
+  const name = NAMESPACE+'project'+defaultProjectCounter;
+  localStorage.setItem(name, code);
+  defaultProjectCounter++;
+  showNotif(`Proyek tersimpan sebagai "${name.replace(NAMESPACE,'')}"`);
+  updateProjectList();
 }
 
-// INITIAL
-fetchPosts();
+function saveAsProject(){
+  const code = document.getElementById('codeInput').value;
+  if(!code.trim()){ showNotif('Kode kosong!'); return; }
+  const nameInput = prompt('Masukkan nama proyek:','project_custom');
+  if(!nameInput) return;
+  const name = NAMESPACE+nameInput;
+  localStorage.setItem(name, code);
+  showNotif(`Proyek tersimpan sebagai "${nameInput}"`);
+  updateProjectList();
+}
+
+function renameProject(){
+  const select = document.getElementById('projectSelect');
+  const oldName = select.value;
+  if(!oldName){ showNotif('Pilih proyek terlebih dahulu'); return; }
+  const newNameInput = prompt('Nama baru:', oldName.replace(NAMESPACE,''));
+  if(!newNameInput) return;
+  const newName = NAMESPACE+newNameInput;
+  if(localStorage.getItem(newName)){ showNotif('Nama proyek sudah ada'); return; }
+  const code = localStorage.getItem(oldName);
+  localStorage.setItem(newName, code);
+  localStorage.removeItem(oldName);
+  showNotif(`"${oldName.replace(NAMESPACE,'')}" diganti menjadi "${newNameInput}"`);
+  updateProjectList();
+}
+
+function loadSelectedProject(){
+  const name = document.getElementById('projectSelect').value;
+  if(!name) return;
+  const code = localStorage.getItem(name);
+  if(code!==null){
+    document.getElementById('codeInput').value = code;
+    runCode();
+    showNotif(`Proyek "${name.replace(NAMESPACE,'')}" dimuat`);
+  }
+}
+
+function deleteProject(){
+  const select = document.getElementById('projectSelect');
+  const name = select.value;
+  if(!name){ showNotif('Pilih proyek terlebih dahulu'); return; }
+  if(confirm(`Yakin ingin menghapus proyek "${name.replace(NAMESPACE,'')}"?`)){
+    localStorage.removeItem(name);
+    showNotif(`Proyek "${name.replace(NAMESPACE,'')}" dihapus`);
+    updateProjectList();
+  }
+}
+
+function updateProjectList(){
+  const select = document.getElementById('projectSelect');
+  select.innerHTML='<option value="">-- Pilih proyek --</option>';
+  Object.keys(localStorage)
+    .filter(k=>k.startsWith(NAMESPACE))
+    .forEach(k=>{
+      const option = document.createElement('option');
+      option.value=k;
+      option.textContent=k.replace(NAMESPACE,'');
+      select.appendChild(option);
+    });
+}
+
+// init
+updateProjectList();
 </script>
+
 </body>
 </html>
