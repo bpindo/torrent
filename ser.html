@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WebTorrent Auto Seeder</title>
+<script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+<style>
+body{font-family:system-ui;padding:16px;max-width:600px;margin:auto;background:#f5f5f5}
+input,button{width:100%;padding:12px;margin:8px 0;border-radius:8px;box-sizing:border-box}
+button{border:none;color:#fff;font-weight:600;cursor:pointer}
+.btn-copy{background:#2196F3}
+button:disabled{background:#aaa;cursor:not-allowed}
+.card{background:#fff;padding:12px;border-radius:8px;margin:10px 0}
+.torrent{border-left:4px solid #ccc;padding:8px;margin:8px 0;background:#fafafa}
+.torrent.active{border-left:4px solid #4CAF50}
+.torrent.prog{font-size:0.85em;color:#555}
+</style></head><body>
+<h2>🌱 WebTorrent Auto Seeder</h2>
+
+<input id="magnet" placeholder="Tempel magnet / hash BTIH manual">
+<button class="btn-copy" onclick="addManual()">➕ Tambah & Download</button>
+
+<div class="card" id="info">ℹ️ Menunggu magnet baru dari GAS...</div>
+<div class="card">Seeder Aktif: <span id="count">0</span>/5</div>
+
+<div class="card">
+<h3>🌐 Daftar Seeder Aktif Max 5</h3>
+<div id="listSeeder"></div>
+</div>
+
+<script>
+const API="https://script.google.com/macros/s/AKfycbwCi-pP169wRNLiieaXqn_hfejzSEm2HGGk0EpL2krYTmKkz6ky1_WoBsVcw3F3YxJoBg/exec";
+const MAX_SEEDER = 5;
+const client=new WebTorrent();
+let seeders = {}; // {hash: torrent}
+let lastList = []; // untuk cek magnet baru
+
+function log(t){info.textContent=t}
+function extractHash(v){let m=v.match(/btih:([a-f0-9]{40})/i);if(m)return m[1];if(/^[a-f0-9]{40}$/i.test(v))return v;return null;}
+function buildMagnet(h){let m='magnet:?xt=urn:btih:'+h;["wss://tracker.openwebtorrent.com","wss://tracker.btorrent.xyz"].forEach(tr=>m+="&tr="+encodeURIComponent(tr));return m;}
+
+/* TAMBAH MANUAL */
+function addManual(){
+  let h = extractHash(magnet.value.trim());
+  if(!h){alert("Hash tidak valid");return;}
+  addTorrent(h, "Manual");
+}
+
+/* FUNGSI UTAMA: TAMBAH TORRENT SEBAGAI SEEDER */
+function addTorrent(hash, sumber="GAS"){
+  if(seeders[hash]){
+    log("ℹ️ "+hash.substring(0,8)+"... sudah jadi seeder");
+    return;
+  }
+
+  // Batasi max 5. Kalau penuh hapus yg pertama
+  if(Object.keys(seeders).length >= MAX_SEEDER){
+    let firstHash = Object.keys(seeders)[0];
+    seeders[firstHash].destroy();
+    delete seeders[firstHash];
+    log("🗑️ Hapus seeder lama: "+firstHash.substring(0,8)+"...");
+  }
+
+  client.add(buildMagnet(hash), t=>{
+    seeders[hash] = t;
+    updateUI();
+    log(`⬇️ ${sumber} Download: ${hash.substring(0,8)}...`);
+
+    t.on("download", ()=> updateUI());
+    t.on("wire", ()=> updateUI());
+
+    t.on("done", ()=>{
+      log(`✅ ${hash.substring(0,8)}... Selesai. Mode Seeder`);
+      updateUI();
+    });
+  });
+}
+
+/* UPDATE UI DAFTAR SEEDER */
+function updateUI(){
+  count.textContent = Object.keys(seeders).length;
+  listSeeder.innerHTML = "";
+  Object.keys(seeders).forEach(hash=>{
+    let t = seeders[hash];
+    let div = document.createElement("div");
+    div.className = "torrent " + (t.progress < 1? "active" : "");
+
+    let prog = Math.round(t.progress*100);
+    let peers = t.numPeers;
+
+    div.innerHTML = `
+      <b>${hash.substring(0,16)}...</b><br>
+      <div class="prog">Status: ${t.progress<1?"Downloading":"Seeding"} | ${prog}% | Peer: ${peers}</div>
+      <button onclick="copy('${hash}')" style="width:auto;padding:4px 8px;font-size:0.8em;background:#2196F3;color:#fff;border:none;border-radius:4px;margin-top:4px">📋 Copy</button>
+      <button onclick="remove('${hash}')" style="width:auto;padding:4px 8px;font-size:0.8em;background:#f44336;color:#fff;border:none;border-radius:4px;margin-top:4px">❌ Stop</button>
+    `;
+    listSeeder.appendChild(div);
+  });
+}
+
+function copy(hash){navigator.clipboard.writeText("magnet:?xt=urn:btih:"+hash);log("📋 Disalin");}
+function remove(hash){if(seeders[hash]){seeders[hash].destroy();delete seeders[hash];updateUI();log("❌ Seeder di-stop");}}
+
+/* CEK GAS TIAP 3 DETIK */
+async function cekGAS(){
+  try{
+    const res=await fetch(API+"?t="+Date.now());
+    const data=await res.json();
+    let kode="";
+    if(Array.isArray(data)&&data.length){kode=data[data.length-1].kode||"";}
+    else if(data&&data.kode){kode=data.kode;}
+    if(!kode) return;
+
+    let arr = kode.split(",").filter(Boolean).map(extractHash).filter(Boolean);
+
+    // Cek ada magnet baru atau tidak
+    let isNew = JSON.stringify(arr)!== JSON.stringify(lastList);
+    if(isNew){
+      log("🆕 Ada magnet baru dari GAS. Auto download...");
+      // download semua yg belum ada di seeders
+      arr.forEach(hash=>{
+        if(!seeders[hash]) addTorrent(hash, "GAS");
+      });
+      lastList = arr;
+    }
+  }catch(e){console.log("Error cek GAS", e)}
+}
+
+cekGAS();
+setInterval(cekGAS, 3000); // cek tiap 3 detik
+</script></body></html>
